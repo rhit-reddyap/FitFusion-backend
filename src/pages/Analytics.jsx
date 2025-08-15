@@ -1,9 +1,12 @@
 // src/pages/Analytics.jsx
 import { useEffect, useMemo, useState } from "react";
 
-const FOOD_KEY   = "ff-food-logs-v1";    // { 'YYYY-MM-DD': [{calories,...}] }
-const WEIGHT_KEY = "ff-weight-log-v1";   // [{date, weight_kg}]
-const BURN_KEY   = "ff-burn-logs-v1";    // { 'YYYY-MM-DD': number }
+/* Storage Keys */
+const FOOD_KEY    = "ff-food-logs-v1";     // { 'YYYY-MM-DD': [{calories,...}] }
+const WEIGHT_KEY  = "ff-weight-log-v1";    // [{date, weight_kg}]
+const BURN_KEY    = "ff-burn-logs-v1";     // { 'YYYY-MM-DD': number }  (manual burn)
+const WKOUT_KEY   = "ff-workouts-v1";      // [ { date:'YYYY-MM-DD', duration_s:number } ]
+const PROFILE_KEY = "ff-user-profile-v1";  // { weight_kg, ... }
 
 const safeJSON = (s, f) => { try { return JSON.parse(s) ?? f; } catch { return f; } };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -77,10 +80,45 @@ export default function Analytics() {
   const [burn, setBurn] = useState({});
   const [burnInput, setBurnInput] = useState("");
 
+  const [workouts, setWorkouts] = useState([]);
+  const [profile, setProfile] = useState({});
+
+  // Intensity for fallback (workout estimate); manual burns override this
+  const [metLevel, setMetLevel] = useState("moderate"); // light | moderate | hard
+  const MET = metLevel === "light" ? 3.5 : metLevel === "hard" ? 8 : 6;
+
+  // Unit system toggle: "metric" (kg, cm) or "imperial" (lb, in)
+  const [unitSystem, setUnitSystem] = useState("metric");
+  const toggleUnitSystem = () => setUnitSystem(u => (u === "metric" ? "imperial" : "metric"));
+
+  // conversions and display helpers
+  const kgToLb = (kg) => kg * 2.20462;
+  const cmToIn = (cm) => cm / 2.54;
+  const formatWeight = (kg, digits = 1) => {
+    if (!Number.isFinite(kg)) return "—";
+    return unitSystem === "metric" ? `${kg.toFixed(digits)} kg` : `${kgToLb(kg).toFixed(digits)} lb`;
+    };
+  const formatWeightChange = (kgChange, digits = 2) => {
+    if (!Number.isFinite(kgChange)) return "—";
+    return unitSystem === "metric" ? `${kgChange.toFixed(digits)} kg` : `${kgToLb(kgChange).toFixed(digits)} lb`;
+  };
+
   useEffect(() => {
     setFood(safeJSON(localStorage.getItem(FOOD_KEY), {}));
     setWeights(safeJSON(localStorage.getItem(WEIGHT_KEY), []));
     setBurn(safeJSON(localStorage.getItem(BURN_KEY), {}));
+    setWorkouts(safeJSON(localStorage.getItem(WKOUT_KEY), []));
+    setProfile(safeJSON(localStorage.getItem(PROFILE_KEY), {}));
+
+    const onStorage = () => {
+      setFood(safeJSON(localStorage.getItem(FOOD_KEY), {}));
+      setWeights(safeJSON(localStorage.getItem(WEIGHT_KEY), []));
+      setBurn(safeJSON(localStorage.getItem(BURN_KEY), {}));
+      setWorkouts(safeJSON(localStorage.getItem(WKOUT_KEY), []));
+      setProfile(safeJSON(localStorage.getItem(PROFILE_KEY), {}));
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const cal28 = useMemo(() => caloriesSeries(food, 28), [food]);
@@ -91,13 +129,31 @@ export default function Analytics() {
     const items = Array.isArray(food[k]) ? food[k] : [];
     return items.reduce((t, it) => t + (Number(it.calories) || 0), 0);
   }));
-  const last7Burned = sum(last7Keys.map(k => Number(burn[k] || 0)));
+  const last7BurnedManual = sum(last7Keys.map(k => Number(burn[k] || 0)));
 
-  const net7 = last7Consumed - last7Burned;     // kcal
-  const avgDailyNet = net7 / 7;                 // kcal/day
-  const estLbChange = net7 / 3500;              // lb
+  // Fallback burned from workouts if manual burn not provided
+  const last7BurnedFromWorkouts = useMemo(() => {
+    const kg = Number(profile?.weight_kg) || 75;
+    const since = new Date(); since.setDate(since.getDate() - 6);
+    const weekSessions = (Array.isArray(workouts) ? workouts : []).filter(w => new Date(w.date) >= since);
+    let total = 0;
+    for (const w of weekSessions) {
+      const sec = Number(w.duration_s) || 0;
+      total += MET * kg * (sec / 3600); // kcal = MET * kg * hours
+    }
+    return Math.round(total);
+  }, [workouts, profile?.weight_kg, MET]);
+
+  // Prefer manual burns; else fallback estimate
+  const usedBurn = last7BurnedManual > 0 ? last7BurnedManual : last7BurnedFromWorkouts;
+  const burnSource = last7BurnedManual > 0 ? "Manual (ff-burn-logs-v1)" : "Estimated from workouts (MET)";
+
+  // Metabolism calc
+  const net7 = last7Consumed - usedBurn;     // kcal
+  const avgDailyNet = net7 / 7;              // kcal/day
+  const estLbChange = net7 / 3500;           // lb
   const estKgChange = estLbChange * 0.45359237; // kg
-  const latestWeight = w28.vals.filter(Number.isFinite).slice(-1)[0] ?? null;
+  const latestWeightKg = w28.vals.filter(Number.isFinite).slice(-1)[0] ?? null;
 
   const saveTodayBurn = () => {
     const v = Number(burnInput);
@@ -111,13 +167,59 @@ export default function Analytics() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-slate-900">Analytics — Fusion Fitness</h1>
-      <p className="text-slate-600">Trends for your calories, weight, and weekly metabolism estimate.</p>
+      {/* Header + Unit toggle */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Analytics — Fusion Fitness</h1>
+          <p className="text-slate-600">Trends for your calories, weight, and weekly metabolism estimate.</p>
+        </div>
+        <button
+          onClick={toggleUnitSystem}
+          className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm hover:bg-slate-50"
+          title="Toggle unit system"
+        >
+          Units: {unitSystem === "metric" ? "Metric (kg, cm)" : "Imperial (lb, in)"}
+        </button>
+      </div>
 
-      {/* Quick burn entry */}
+      {/* ===== Weekly Metabolism Estimate ===== */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-lg font-semibold text-slate-900">Weekly Metabolism Estimate</div>
+          {/* Intensity only matters for fallback (workouts estimate) */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-slate-600">Intensity (fallback)</label>
+            <select
+              value={metLevel}
+              onChange={(e)=>setMetLevel(e.target.value)}
+              className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
+              title="Used only when no manual burn is logged"
+            >
+              <option value="light">Light (MET ~ 3.5)</option>
+              <option value="moderate">Moderate (MET ~ 6)</option>
+              <option value="hard">Hard (MET ~ 8)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <KPI label="Consumed (7d)" value={`${format(last7Consumed)} kcal`} />
+          <KPI label="Burned (7d)" value={`${format(usedBurn)} kcal`} />
+          <KPI label="Net (7d)" value={`${format(net7)} kcal`} />
+          <KPI label="Avg Daily Net" value={`${format(avgDailyNet)} kcal/d`} />
+          <KPI label="Projected Δ (7d)" value={formatWeightChange(estKgChange)} />
+        </div>
+
+        <div className="mt-2 text-xs text-slate-600">
+          Burn source: <b>{burnSource}</b>. Projection uses <b>3500 kcal ≈ 1 lb</b>. Current weight:{" "}
+          <b>{formatWeight(latestWeightKg)}</b>.
+        </div>
+      </section>
+
+      {/* Quick burn entry (manual) */}
       <section className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="text-sm text-slate-700">Enter today’s calories burned:</div>
+          <div className="text-sm text-slate-700">Enter today’s calories burned (manual):</div>
           <input
             type="number"
             min={0}
@@ -129,19 +231,11 @@ export default function Analytics() {
           <button onClick={saveTodayBurn} className="rounded-xl bg-slate-900 text-white px-4 py-2 font-semibold hover:bg-slate-800">
             Save
           </button>
-          <div className="text-xs text-slate-500">Saved in <code>ff-burn-logs-v1</code>.</div>
+          <div className="text-xs text-slate-500">Stored in <code>ff-burn-logs-v1</code>. Overrides fallback.</div>
         </div>
       </section>
 
-      {/* KPIs */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPI label="7-Day Consumed" value={`${format(last7Consumed)} kcal`} />
-        <KPI label="7-Day Burned" value={`${format(last7Burned)} kcal`} />
-        <KPI label="Avg Daily Net" value={`${format(avgDailyNet)} kcal/d`} />
-        <KPI label="Est. 7-Day ΔWeight" value={`${format(estLbChange,2)} lb (${format(estKgChange,2)} kg)`} />
-      </section>
-
-      {/* Calories */}
+      {/* Calories (28d) */}
       <section className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
         <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Calories Consumed (28 days)</div>
         <Sparkline data={cal28.vals} />
@@ -150,13 +244,12 @@ export default function Analytics() {
         </div>
       </section>
 
-      {/* Weight */}
+      {/* Weight (28d) */}
       <section className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
         <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Weight (28 days)</div>
         <Sparkline data={w28.vals} />
         <div className="text-xs text-slate-600 mt-1">
-          Latest: <b>{latestWeight != null ? Number(latestWeight).toFixed(1) : "—"} kg</b>
-          {" "}({latestWeight != null ? (Number(latestWeight)*2.20462).toFixed(1) : "—"} lb)
+          Latest: <b>{formatWeight(latestWeightKg)}</b>
         </div>
       </section>
     </div>

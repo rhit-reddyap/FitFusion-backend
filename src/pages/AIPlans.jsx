@@ -103,7 +103,9 @@ function avg(arr, len = arr.length) {
 
 /* ---------- Component ---------- */
 export default function AIPlans() {
-  const [convo, setConvo] = useState(() => safeJSON(localStorage.getItem(CONVO_KEY), []));
+  const [convo, setConvo] = useState([
+  { role: "assistant", text: "Hi! I’m your Fusion Fitness coach. How can I help today?", at: Date.now(), source: "system" }
+]);
   const [plan, setPlan] = useState(() => safeJSON(localStorage.getItem(PLAN_KEY), defaultPlan));
   const [profile, setProfile] = useState(() => safeJSON(localStorage.getItem(PROFILE_KEY), defaultProfile));
   const [input, setInput] = useState("");
@@ -125,6 +127,18 @@ export default function AIPlans() {
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [convo, busy]);
+useEffect(() => {
+  // Move any old visible conversation into an archive, then start fresh.
+  const prev = safeJSON(localStorage.getItem(CONVO_KEY), []);
+  if (Array.isArray(prev) && prev.length) {
+    const ARCHIVE_KEY = "ff-coach-archive-v1"; // new archive bucket
+    const archive = safeJSON(localStorage.getItem(ARCHIVE_KEY), []);
+    archive.push({ archivedAt: Date.now(), convo: prev });
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+  }
+  // Clear the active convo store so it doesn’t get reloaded next app open
+  localStorage.removeItem(CONVO_KEY);
+}, []);
 
   const cal14 = useMemo(() => caloriesSeries(foodObj, 14), [foodObj]);
   const w14 = useMemo(() => weightSeries(weights, 14), [weights]);
@@ -178,6 +192,14 @@ export default function AIPlans() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avg7cal, JSON.stringify(w14.vals), profile.goal, profile.weight_kg]);
+function loadLatestArchivedChat() {
+  const ARCHIVE_KEY = "ff-coach-archive-v1";
+  const archive = safeJSON(localStorage.getItem(ARCHIVE_KEY), []);
+  const last = archive[archive.length - 1];
+  if (last?.convo?.length) {
+    setConvo(last.convo);
+  }
+}
 
   /* Chat handling */
   const send = async () => {
