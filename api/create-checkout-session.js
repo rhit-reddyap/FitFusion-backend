@@ -4,12 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   try {
     const { token } = req.body || {};
+    if (!token) return res.status(401).json({ error: 'missing_token' });
+
     const supa = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
     const { data: { user }, error } = await supa.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Unauthorized' });
+    if (error || !user) return res.status(401).json({ error: 'unauthorized' });
 
+    // Ensure Stripe customer on profile
     const { data: profile } = await supa.from('profiles').select('*').eq('id', user.id).single();
     let customerId = profile?.stripe_customer_id;
     if (!customerId) {
