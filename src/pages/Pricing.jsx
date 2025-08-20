@@ -9,13 +9,11 @@ export default function Pricing() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceId, mode }),
       });
-      const { url } = await res.json();
 
-      if (url) {
-        window.location.href = url; // Redirect to Stripe Checkout
-      } else {
-        throw new Error("No checkout URL returned");
-      }
+      if (!res.ok) throw new Error("Failed to create checkout session");
+
+      const { url } = await res.json();
+      window.location.href = url; // Redirect to Stripe Checkout
     } catch (err) {
       console.error("Checkout error:", err);
       alert("Something went wrong. Please try again.");
@@ -53,7 +51,7 @@ export default function Pricing() {
           </p>
           <button
             onClick={() =>
-              handleCheckout("price_1RyHEb0yFM5cg5nbtjk5Cnzn", "subscription")
+              handleCheckout("price_XXXX_monthly", "subscription") // replace with Stripe Price ID
             }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
@@ -72,7 +70,7 @@ export default function Pricing() {
           </p>
           <button
             onClick={() =>
-              handleCheckout("price_1RyHEb0yFM5cg5nbtjk5Cnzn", "subscription")
+              handleCheckout("price_XXXX_annual", "subscription") // replace with Stripe Price ID
             }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
@@ -84,13 +82,12 @@ export default function Pricing() {
         <div className="bg-white shadow-md rounded-2xl p-6 flex flex-col">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Cookbook</h2>
           <p className="text-gray-600 mb-6">
-            Unlock our full cookbook with integrated recipes and macros in your
-            Food Tracker.
+            Unlock our full cookbook with integrated recipes and macros in your Food Tracker.
           </p>
           <p className="text-2xl font-bold mb-6">$29.99</p>
           <button
             onClick={() =>
-              handleCheckout("price_1RyGrd23ct5L2UZDMTzQ1feA", "payment")
+              handleCheckout("price_XXXX_cookbook", "payment") // replace with Stripe Price ID
             }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
