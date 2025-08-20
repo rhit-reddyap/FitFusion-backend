@@ -4,13 +4,18 @@ import React from "react";
 export default function Pricing() {
   const handleCheckout = async (priceId, mode = "subscription") => {
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceId, mode }),
       });
       const { url } = await res.json();
-      window.location.href = url; // Redirect to Stripe Checkout
+
+      if (url) {
+        window.location.href = url; // Redirect to Stripe Checkout
+      } else {
+        throw new Error("No checkout URL returned");
+      }
     } catch (err) {
       console.error("Checkout error:", err);
       alert("Something went wrong. Please try again.");
@@ -47,10 +52,12 @@ export default function Pricing() {
             $9.99<span className="text-lg">/mo</span>
           </p>
           <button
-            onClick={() => handleCheckout("price_1RyGYY23ct5L2UZDBEt0XULc", "subscription")}
+            onClick={() =>
+              handleCheckout("price_1RyHEb0yFM5cg5nbtjk5Cnzn", "subscription")
+            }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
-            See Plans
+            Get Plan
           </button>
         </div>
 
@@ -64,10 +71,12 @@ export default function Pricing() {
             $99.99<span className="text-lg">/yr</span>
           </p>
           <button
-            onClick={() => handleCheckout("price_1RyGYY23ct5L2UZDBEt0XULc", "subscription")}
+            onClick={() =>
+              handleCheckout("price_1RyHEb0yFM5cg5nbtjk5Cnzn", "subscription")
+            }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
-            See Plans
+            Get Plan
           </button>
         </div>
 
@@ -80,7 +89,9 @@ export default function Pricing() {
           </p>
           <p className="text-2xl font-bold mb-6">$29.99</p>
           <button
-            onClick={() => handleCheckout("price_1RyGrd23ct5L2UZDMTzQ1feA", "payment")}
+            onClick={() =>
+              handleCheckout("price_1RyGrd23ct5L2UZDMTzQ1feA", "payment")
+            }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
             Buy Cookbook
