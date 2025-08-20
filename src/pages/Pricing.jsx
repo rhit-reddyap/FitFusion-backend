@@ -51,7 +51,7 @@ export default function Pricing() {
           </p>
           <button
             onClick={() =>
-              handleCheckout("price_XXXX_monthly", "subscription") // replace with Stripe Price ID
+              handleCheckout("price_1RyHEb0yFM5cg5nbtjk5Cnzn", "subscription") // replace with Stripe Price ID
             }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
@@ -70,7 +70,7 @@ export default function Pricing() {
           </p>
           <button
             onClick={() =>
-              handleCheckout("price_XXXX_annual", "subscription") // replace with Stripe Price ID
+              handleCheckout("price_1RyHEb0yFM5cg5nbtjk5Cnzn", "subscription") // replace with Stripe Price ID
             }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
@@ -87,7 +87,7 @@ export default function Pricing() {
           <p className="text-2xl font-bold mb-6">$29.99</p>
           <button
             onClick={() =>
-              handleCheckout("price_XXXX_cookbook", "payment") // replace with Stripe Price ID
+              handleCheckout("price_1RyHjA0yFM5cg5nbWcOgwChu", "payment") // replace with Stripe Price ID
             }
             className="mt-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
           >
