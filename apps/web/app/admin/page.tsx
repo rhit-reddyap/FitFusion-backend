@@ -1,12 +1,10 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function AdminPage() {
-  const { data: session } = useSession() ?? {};
+  const { data: session } = useSession();
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
@@ -16,7 +14,8 @@ export default function AdminPage() {
           Welcome,{" "}
           <span className="font-semibold">
             {session?.user?.email ?? "Guest"}
-          </span>.
+          </span>
+          .
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -26,15 +25,18 @@ export default function AdminPage() {
           >
             Manage Users
           </Link>
+
           <Link
             href="/admin/settings"
             className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg shadow text-center"
           >
             App Settings
           </Link>
+
           <button className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg shadow">
             Analytics
           </button>
+
           <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg shadow">
             Danger Zone
           </button>
