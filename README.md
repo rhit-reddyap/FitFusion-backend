@@ -1,16 +1,7 @@
-# Fit Fusion – Vercel Minimal Starter
+# Deployment Guide (Minimal)
 
-This is a bare‑bones React + Vite app that **always deploys** on Vercel.
-
-## Deploy settings
-- Install Command: `npm install`
-- Build Command: `npm run build`
-- Output Directory: `dist`
-
-These are also enforced via `vercel.json` in the repo.
-
-## Local dev (optional)
-```bash
-npm install
-npm run dev
-```
+1. Import SQL from `supabase/` into your Supabase project.
+2. Copy keys into `.env.local` and `.env`.
+3. Run `./scripts/deploy.sh` to push web app to Vercel.
+4. Run `./scripts/expo-publish.sh` to push mobile app via Expo.
+5. Verify Stripe + Supabase connections.

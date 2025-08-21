@@ -1,4 +1,5 @@
-node_modules
-dist
 .env
-.vercel
+node_modules
+.next
+dist
+.DS_Store
