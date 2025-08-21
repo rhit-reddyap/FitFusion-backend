@@ -19,7 +19,10 @@ export default NextAuth({
         });
         if (!user || !user.password) return null;
 
-        const valid = await compare(credentials.password, user.password);
+        if (!credentials?.password) return null;
+
+const valid = await compare(credentials.password, user.password);
+
         if (!valid) return null;
 
         return { id: user.id, email: user.email, role: user.role };
