@@ -10,7 +10,7 @@ const STORAGE_KEY = 'ff-gamification';
 type Badge = {
   id: number;
   name: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;   // <-- Fix here
 };
 
 export default function GamificationPage() {
