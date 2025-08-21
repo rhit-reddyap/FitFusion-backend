@@ -3,9 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --bg: 246 246 248;
-  --card: 255 255 255;
-  --text: 22 22 22;
+   /* Athletic teal + dark surfaces */
+  --bg: #0b1020;
+  --surface: #0e1427;
+  --card: #11162a;
+  --border: #1b2440;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --brand: #07b6ad; /* teal */
+}
+/* Optional: utility hooks for paywall blur panes */
+.paywall-blur {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+.paywall-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(8px);
 }
 
 html, body, #__next {
