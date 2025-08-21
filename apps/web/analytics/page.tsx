@@ -9,16 +9,21 @@ export default function AnalyticsPage() {
   const [weights, setWeights] = useState<WeightLog[]>([]);
   const [burn, setBurn] = useState<BurnLog[]>([]);
   const [unit, setUnit] = useState<'kg' | 'lb'>('kg');
-  const [streak, setStreak] = useState(0);
+  const [streak, setStreak] = useState<number>(0);
 
   useEffect(() => {
     const savedWeights = localStorage.getItem('weight_logs');
     const savedBurn = localStorage.getItem('burn_logs');
-    if (savedWeights) setWeights(JSON.parse(savedWeights));
-    if (savedBurn) setBurn(JSON.parse(savedBurn));
+
+    if (savedWeights) {
+      setWeights(JSON.parse(savedWeights) as WeightLog[]);
+    }
+    if (savedBurn) {
+      setBurn(JSON.parse(savedBurn) as BurnLog[]);
+    }
   }, []);
 
-  const convertWeight = (w: number) => unit === 'kg' ? w : w * 2.20462;
+  const convertWeight = (w: number) => (unit === 'kg' ? w : w * 2.20462);
 
   const calc1RM = (weight: number, reps: number) => {
     if (reps === 1) return weight;
@@ -30,7 +35,10 @@ export default function AnalyticsPage() {
       <h1>Analytics</h1>
       <div style={{ margin: '1rem 0' }}>
         <label>Units: </label>
-        <select value={unit} onChange={(e) => setUnit(e.target.value as 'kg' | 'lb')}>
+        <select
+          value={unit}
+          onChange={(e) => setUnit(e.target.value as 'kg' | 'lb')}
+        >
           <option value="kg">kg</option>
           <option value="lb">lb</option>
         </select>
@@ -48,7 +56,9 @@ export default function AnalyticsPage() {
       <h3>Burn Logs</h3>
       <ul>
         {burn.map((b, i) => (
-          <li key={i}>{b.date}: {b.caloriesBurned} kcal</li>
+          <li key={i}>
+            {b.date}: {b.caloriesBurned} kcal
+          </li>
         ))}
       </ul>
 

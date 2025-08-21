@@ -11,12 +11,12 @@ type AIPlan = {
 
 export default function AICoachPage() {
   const [plans, setPlans] = useState<AIPlan[]>([]);
-  const [type, setType] = useState('Workout');
-  const [details, setDetails] = useState('');
+  const [type, setType] = useState<string>('Workout');
+  const [details, setDetails] = useState<string>('');
 
   useEffect(() => {
     const saved = localStorage.getItem('ai_plans');
-    if (saved) setPlans(JSON.parse(saved));
+    if (saved) setPlans(JSON.parse(saved) as AIPlan[]);
   }, []);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function AICoachPage() {
       <ul>
         {plans.map((p, i) => (
           <li key={i}>
-            <strong>{p.type}</strong>: {p.details}{" "}
+            <strong>{p.type}</strong>: {p.details}{' '}
             {p.premium && <span style={{ color: 'orange' }}>Premium</span>}
           </li>
         ))}

@@ -16,6 +16,11 @@
   "devDependencies": {
     "turbo": "2.5.4",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.3",
+    "lucide-react": "^0.540.0",
+    "react-hot-toast": "^2.4.1",
+    "react-native-confetti-cannon": "^1.5.2"
   }
 }
-

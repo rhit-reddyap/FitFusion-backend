@@ -1,87 +1,61 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { Trophy, Star, Flame } from 'lucide-react';
 
-type FoodEntry = {
-  id?: number;
-  name: string;
-  grams: number;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-};
-
-export default function FoodPage() {
-  const [foods, setFoods] = useState<FoodEntry[]>([]);
-  const [name, setName] = useState('');
-  const [grams, setGrams] = useState(0);
-
-  // Temporary local state (later will connect to Supabase)
-  useEffect(() => {
-    const saved = localStorage.getItem('food_logs');
-    if (saved) setFoods(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('food_logs', JSON.stringify(foods));
-  }, [foods]);
-
-  const addFood = () => {
-    if (!name || grams <= 0) return;
-    const entry: FoodEntry = {
-      name,
-      grams,
-      calories: Math.round(grams * 2),
-      protein: Math.round(grams * 0.1),
-      carbs: Math.round(grams * 0.2),
-      fat: Math.round(grams * 0.05)
-    };
-    setFoods([...foods, entry]);
-    setName('');
-    setGrams(0);
-  };
-
-  const removeFood = (i: number) => {
-    const copy = [...foods];
-    copy.splice(i, 1);
-    setFoods(copy);
-  };
-
-  const totalCalories = foods.reduce((a, f) => a + f.calories, 0);
-  const totalProtein = foods.reduce((a, f) => a + f.protein, 0);
+export default function GamificationPage() {
+  const [points, setPoints] = useState(1200);
+  const [streak, setStreak] = useState(5);
+  const [badges, setBadges] = useState([
+    { id: 1, name: 'Consistency King', icon: <Flame className="w-6 h-6 text-red-500" /> },
+    { id: 2, name: 'First PR Badge', icon: <Trophy className="w-6 h-6 text-yellow-500" /> },
+    { id: 3, name: 'Team Player', icon: <Star className="w-6 h-6 text-blue-500" /> },
+  ]);
 
   return (
-    <div>
-      <h1>Food Tracker</h1>
-      <div style={{ margin: '1rem 0' }}>
-        <input
-          placeholder="Food name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ marginRight: '0.5rem' }}
-        />
-        <input
-          type="number"
-          placeholder="Grams"
-          value={grams}
-          onChange={(e) => setGrams(Number(e.target.value))}
-          style={{ marginRight: '0.5rem' }}
-        />
-        <button onClick={addFood}>Add</button>
+    <div className="p-6 space-y-8">
+      <h1 className="text-3xl font-bold">Gamification</h1>
+
+      {/* Points / Progress */}
+      <div className="rounded-2xl shadow-md bg-white p-4">
+        <h2 className="text-xl font-semibold">Your Progress</h2>
+        <p className="mt-2 text-gray-600">Total Points: <span className="font-bold">{points}</span></p>
+        <p className="text-gray-600">Current Streak: 🔥 {streak} days</p>
+        <div className="w-full bg-gray-200 rounded-full h-4 mt-4">
+          <div 
+            className="bg-green-500 h-4 rounded-full transition-all duration-500" 
+            style={{ width: `${(points % 1000) / 10}%` }}
+          />
+        </div>
+        <p className="mt-2 text-sm text-gray-500">Next reward at {(Math.floor(points / 1000) + 1) * 1000} pts</p>
       </div>
 
-      <ul>
-        {foods.map((f, i) => (
-          <li key={i}>
-            {f.name} - {f.grams}g | {f.calories} cal, {f.protein}g protein
-            <button onClick={() => removeFood(i)} style={{ marginLeft: '0.5rem' }}>X</button>
-          </li>
-        ))}
-      </ul>
+      {/* Badges */}
+      <div className="rounded-2xl shadow-md bg-white p-4">
+        <h2 className="text-xl font-semibold">Badges</h2>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          {badges.map((badge) => (
+            <div key={badge.id} className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 shadow-sm">
+              {badge.icon}
+              <span className="font-medium">{badge.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      <h3>Total Calories: {totalCalories}</h3>
-      <h3>Total Protein: {totalProtein}g</h3>
+      {/* Actions */}
+      <div className="rounded-2xl shadow-md bg-white p-4">
+        <h2 className="text-xl font-semibold">Daily Actions</h2>
+        <button
+          onClick={() => {
+            setPoints(points + 50);
+            setStreak(streak + 1);
+          }}
+          className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 transition"
+        >
+          Complete a Task (+50 pts)
+        </button>
+      </div>
     </div>
   );
 }
