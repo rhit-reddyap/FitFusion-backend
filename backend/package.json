@@ -1,8 +1,0 @@
-{
-  "name": "fit-fusion-backend",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "echo 'Backend dev (Supabase + Stripe) placeholder'"
-  }
-}

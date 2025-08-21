@@ -1,6 +1,13 @@
-.env
-node_modules
-.next
-dist
+# dependencies
+/node_modules
+
+# production
+/.next
+/out
+
+# env
+.env*
+!.env.example
+
+# misc
 .DS_Store
-/generated/prisma
