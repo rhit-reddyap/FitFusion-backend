@@ -3,26 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Star, Flame, Crown, Medal } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import { Platform } from 'react-native';
-
-// --- Confetti launcher (works for web + native) ---
-let launchConfetti: () => void;
-if (Platform.OS === 'web') {
-  const confetti = require('canvas-confetti');
-  launchConfetti = () => {
-    confetti({
-      particleCount: 120,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
-  };
-} else {
-  // For native, you’ll render <ConfettiCannon /> when triggered
-  // Here we just log, actual trigger handled via state
-  launchConfetti = () => {
-    console.log('🎉 Launch mobile confetti! Use <ConfettiCannon /> in native screen.');
-  };
-}
+import confetti from 'canvas-confetti';
 
 const STORAGE_KEY = 'ff-gamification';
 
@@ -84,6 +65,15 @@ export default function GamificationPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [points, streak, badges, lastActionDate]);
 
+  // Confetti launcher (web only)
+  const launchConfetti = () => {
+    confetti({
+      particleCount: 120,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+  };
+
   // Award badge with toast + confetti
   const awardBadge = (id: number, name: string, icon: JSX.Element) => {
     if (!badges.some((b) => b.id === id)) {
@@ -99,7 +89,6 @@ export default function GamificationPage() {
     let newStreak = streak;
 
     if (lastActionDate !== currentDate) {
-      // If the last action was yesterday → continue streak
       if (
         lastActionDate &&
         Math.floor(
@@ -110,7 +99,6 @@ export default function GamificationPage() {
         newStreak = streak + 1;
         setStreak(newStreak);
       } else {
-        // Otherwise reset streak to 1
         newStreak = 1;
         setStreak(1);
       }
@@ -119,7 +107,6 @@ export default function GamificationPage() {
     setPoints(points + 50);
     setLastActionDate(currentDate);
 
-    // Check streak milestones → award new badges
     if (newStreak === 7) {
       awardBadge(101, '1 Week Warrior', <Medal className="w-6 h-6 text-green-500" />);
     }
@@ -134,7 +121,6 @@ export default function GamificationPage() {
   return (
     <div className="p-6 space-y-8">
       <Toaster position="top-right" />
-
       <h1 className="text-3xl font-bold">Gamification</h1>
 
       {/* Points / Progress */}
@@ -160,10 +146,7 @@ export default function GamificationPage() {
         <h2 className="text-xl font-semibold">Badges</h2>
         <div className="grid grid-cols-2 gap-4 mt-4">
           {badges.map((badge) => (
-            <div
-              key={badge.id}
-              className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 shadow-sm"
-            >
+            <div key={badge.id} className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 shadow-sm">
               {badge.icon}
               <span className="font-medium">{badge.name}</span>
             </div>
