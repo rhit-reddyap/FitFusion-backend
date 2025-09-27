@@ -332,7 +332,8 @@ export default function UltimateWorkoutTrackerRevamped({ onBack }: UltimateWorko
   useEffect(() => {
     loadUserData();
     startAnimations();
-    setUserStats(mockUserStats);
+    // Do not override real stats with mock data here.
+    // The `loadUserData()` call above will populate userStats from DataStorage.
     
     // Initialize filtered exercises safely
     if (exerciseVideoLibrary && exerciseVideoLibrary.length > 0) {
