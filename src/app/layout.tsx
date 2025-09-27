@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Header from "@/components/Header";
-import BottomNav from "@/components/BottomNav";
-import { AuthProvider } from "@/components/AuthContext";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "FitFusion",
+  title: "Fit Fusion AI",
   description: "AI-powered fitness & nutrition tracker"
 };
 
@@ -14,9 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <AuthProvider>
-          <Header />
-          <main className="pb-16">{children}</main>
-          <BottomNav />
+          {children}
         </AuthProvider>
       </body>
     </html>

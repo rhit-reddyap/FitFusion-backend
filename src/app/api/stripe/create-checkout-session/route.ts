@@ -1,22 +1,37 @@
-import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { NextRequest, NextResponse } from "next/server";
+import { createCheckoutSession, getCustomerByEmail, createCustomer } from "@/lib/stripe";
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const price = process.env.STRIPE_PRICE_ID;
-    if (!price) return NextResponse.json({ error: "Missing STRIPE_PRICE_ID" }, { status: 400 });
+    const { priceId, userEmail, promoCode } = await request.json();
 
-    const origin = process.env.NEXT_PUBLIC_APP_URL!;
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price, quantity: 1 }],
-      success_url: `${origin}/profile?status=success`,
-      cancel_url: `${origin}/profile?status=cancelled`,
-      // recommend attaching supabase user id in metadata from client later
+    if (!priceId || !userEmail) {
+      return NextResponse.json(
+        { error: "Missing required parameters" },
+        { status: 400 }
+      );
+    }
+
+    // Get or create Stripe customer
+    let customer = await getCustomerByEmail(userEmail);
+    if (!customer) {
+      customer = await createCustomer(userEmail);
+    }
+
+    const session = await createCheckoutSession({
+      priceId,
+      customerId: customer.id,
+      successUrl: `${request.nextUrl.origin}/dashboard?success=true`,
+      cancelUrl: `${request.nextUrl.origin}/dashboard?canceled=true`,
+      promoCode,
     });
 
-    return NextResponse.json({ url: session.url });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ sessionId: session.id, url: session.url });
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    return NextResponse.json(
+      { error: "Failed to create checkout session" },
+      { status: 500 }
+    );
   }
 }

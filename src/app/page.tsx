@@ -1,23 +1,43 @@
-import Link from "next/link";
+"use client";
 
-export default function LandingPage() {
-  return (
-    <section className="container py-16">
-      <div className="max-w-2xl mx-auto text-center">
-        <h1 className="text-4xl font-bold mb-4">FitFusion</h1>
-        <p className="text-gray-600 mb-8">
-          Track workouts &amp; nutrition, visualize progress, join communities,
-          and unlock AI coaching.
-        </p>
-        <div className="flex gap-3 justify-center">
-          <Link href="/signin" className="btn">
-            Get started
-          </Link>
-          <Link href="/dashboard" className="btn-outline">
-            Preview
-          </Link>
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/AuthProvider';
+import SplashScreen from '@/components/SplashScreen';
+
+export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        router.push('/signin');
+      }
+    }
+  }, [user, loading, router]);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading Fit Fusion AI...</p>
         </div>
       </div>
-    </section>
-  );
+    );
+  }
+
+  return null;
 }

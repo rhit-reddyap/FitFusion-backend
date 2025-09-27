@@ -1,35 +1,61 @@
 "use client";
 
-import Link from "next/link";
-import { useAuth } from "./AuthContext";
-import { Crown, LogOut } from "lucide-react";
-import { usePathname } from "next/navigation";
+import React from 'react';
+import { Menu, Bell, User } from 'lucide-react';
 
-export default function Header() {
-  const { user, signOut } = useAuth();
-  const pathname = usePathname();
+interface HeaderProps {
+  onToggleSidebar: () => void;
+  notifications?: number;
+  user?: {
+    display_name?: string;
+    avatar_url?: string;
+  };
+}
 
-  // Hide header on signin page
-  if (pathname?.startsWith("/signin")) return null;
-
+const Header: React.FC<HeaderProps> = ({ onToggleSidebar, notifications = 0, user }) => {
   return (
-    <header className="border-b bg-white/70 backdrop-blur sticky top-0 z-40">
-      <div className="container flex items-center justify-between py-3">
-        <Link href="/dashboard" className="font-semibold text-lg">
-          FitFusion
-        </Link>
-        <div className="flex items-center gap-2">
-          <Link href="/profile" className="btn-outline rounded-xl px-3 py-1.5 text-sm">Profile</Link>
-          <Link href="/ai" className="btn rounded-xl px-3 py-1.5 text-sm">
-            <Crown size={16} /> Go Pro
-          </Link>
-          {user && (
-            <button onClick={signOut} className="btn-outline rounded-xl px-3 py-1.5 text-sm">
-              <LogOut size={16} /> Sign out
-            </button>
+    <header className="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between md:hidden">
+      {/* Left side - Hamburger menu */}
+      <button
+        onClick={onToggleSidebar}
+        className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
+        aria-label="Toggle sidebar"
+      >
+        <Menu className="w-6 h-6 text-white" />
+      </button>
+
+      {/* Center - App title */}
+      <h1 className="text-lg font-bold text-white">Fit Fusion AI</h1>
+
+      {/* Right side - Notifications and user */}
+      <div className="flex items-center gap-3">
+        {/* Notifications */}
+        <div className="relative">
+          <button className="p-2 rounded-lg hover:bg-gray-800 transition-colors">
+            <Bell className="w-5 h-5 text-gray-400" />
+            {notifications > 0 && (
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-xs text-white">{notifications}</span>
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* User avatar */}
+        <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-blue-500 rounded-full flex items-center justify-center">
+          {user?.avatar_url ? (
+            <img 
+              src={user.avatar_url} 
+              alt={user.display_name || 'User'}
+              className="w-8 h-8 rounded-full"
+            />
+          ) : (
+            <User className="w-4 h-4 text-white" />
           )}
         </div>
       </div>
     </header>
   );
-}
+};
+
+export default Header;

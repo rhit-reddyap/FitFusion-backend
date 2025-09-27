@@ -1,49 +1,249 @@
-# FitFusion Starter (Next.js + Supabase + Stripe)
+# Fit Fusion AI - Advanced Fitness App
 
-A clean base for your fitness app with auth, pages, icons, and Stripe wiring so you can deploy to Vercel.
+A comprehensive, AI-powered fitness application built with Next.js, Supabase, and Stripe. Features workout tracking, nutrition logging, analytics, communities, gamification, and monetization.
 
-## Quick Start
+## 🚀 Features
 
-1. **Install**
+### 🔐 Authentication & User System
+- **Supabase Auth** with Google Sign-In and email/password
+- **User Profiles** with comprehensive data storage
+- **Privacy Settings** and data sharing controls
+- **Secure Authentication** with JWT tokens
+
+### 💳 Monetization
+- **Stripe Integration** for subscriptions and payments
+- **Multiple Plans**: Monthly Pro, Annual Pro, Cookbook one-time purchase
+- **Billing Portal** for subscription management
+- **Promo Code Support** (e.g., "freshmanfriday")
+- **Webhook Handling** for real-time subscription updates
+
+### 🏋️ Workout Tracker (Whoop-style)
+- **Comprehensive Exercise Library** with 8+ exercises and growing
+- **Exercise Categories**: Strength, Cardio, Flexibility, Sports
+- **Muscle Group Targeting** and equipment filtering
+- **Workout Logging** with sets, reps, weights, RPE, and rest periods
+- **Personal Records** tracking (all-time, 6-month, yearly)
+- **1RM Calculator** and PR detection
+- **Workout Templates** and programs
+- **Real-time Analytics** with volume tracking
+
+### 📊 Analytics Dashboard
+- **Volume Tracking** by muscle group and time period
+- **Calories In vs Out** visualization
+- **Weight & Body Composition** trends
+- **Streak Tracking** and badges
+- **Interactive Charts** using Recharts
+- **Performance Metrics** and insights
+- **Time Range Filtering** (7d, 30d, 90d, 1y)
+
+### 🍴 Food Tracker (MyFitnessPal-style)
+- **Comprehensive Food Database** with 8+ foods and growing
+- **Macro Tracking** (calories, protein, carbs, fat, fiber, sodium)
+- **Daily Goals** with progress bars
+- **Meal Categorization** (breakfast, lunch, dinner, snack)
+- **Recipe Integration** (ready for expansion)
+- **Barcode Scanner** support (mobile-ready)
+- **Smart Add** functionality for quick logging
+
+### 🌐 Communities & Social
+- **Community Creation** and management
+- **Member Roles** (owner, admin, moderator, member)
+- **Social Feed** with real-time events
+- **Live Chat** functionality
+- **Data Sharing** controls
+- **Leaderboards** and community stats
+- **Event Types**: PRs, workouts, streaks, achievements
+
+### 🎮 Gamification
+- **XP System** with level progression
+- **Badge System** with 5+ achievement types
+- **Streak Tracking** for consistency
+- **Leaderboards** per community
+- **Achievement Categories**: Consistency, Strength, Social, Nutrition
+- **Progress Visualization** and rewards
+
+### 🤖 AI Coach
+- **Personalized Plans** (workout, nutrition, comprehensive)
+- **Goal-Based Recommendations**
+- **Smart Scheduling** and optimization
+- **Lifestyle Integration** suggestions
+- **Progress Tracking** and adaptation
+
+### 🎨 UI/UX
+- **Dark Theme** inspired by Whoop
+- **Neon Green/Blue Accents** for modern look
+- **Paywall Overlays** for premium features
+- **Smooth Animations** and transitions
+- **Responsive Design** for all devices
+- **Loading States** and error handling
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: Tailwind CSS, Custom CSS
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Payments**: Stripe
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **State Management**: React Context + Hooks
+
+## 📁 Project Structure
+
+```
+src/
+├── app/                    # Next.js app directory
+│   ├── dashboard/         # Main dashboard
+│   ├── workouts/          # Workout tracker
+│   ├── food/              # Food tracker
+│   ├── analytics/         # Analytics dashboard
+│   ├── communities/       # Social features
+│   ├── profile/           # User profile
+│   ├── ai/                # AI coach
+│   ├── signin/            # Authentication
+│   └── api/               # API routes
+├── components/            # Reusable components
+│   ├── auth/              # Authentication components
+│   ├── Sidebar.tsx        # Navigation sidebar
+│   ├── PricingCard.tsx    # Subscription plans
+│   └── PaywallGate.tsx    # Premium feature gates
+├── lib/                   # Utilities and configurations
+│   ├── supabaseClient.ts  # Supabase client
+│   └── stripe.ts          # Stripe configuration
+└── hooks/                 # Custom React hooks
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- Supabase account
+- Stripe account
+
+### Installation
+
+1. **Clone the repository**
    ```bash
-   npm i
+   git clone <repository-url>
+   cd fit-fusion-ai
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   Create a `.env.local` file with:
+   ```env
+   # Supabase Configuration
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE=your_supabase_service_role_key
+
+   # Stripe Configuration
+   STRIPE_SECRET_KEY=your_stripe_secret_key
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+   STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+   STRIPE_MONTHLY_PRICE_ID=your_monthly_price_id
+   STRIPE_ANNUAL_PRICE_ID=your_annual_price_id
+   STRIPE_COOKBOOK_PRICE_ID=your_cookbook_price_id
+
+   # App Configuration
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   ```
+
+4. **Set up Supabase**
+   - Create a new Supabase project
+   - Run the migration files in `supabase/migrations/`
+   - Enable Row Level Security (RLS)
+   - Set up authentication providers
+
+5. **Set up Stripe**
+   - Create a Stripe account
+   - Set up products and prices
+   - Configure webhooks
+   - Add webhook endpoints
+
+6. **Run the development server**
+   ```bash
    npm run dev
    ```
 
-2. **Environment**
-   Copy `.env.example` to `.env` and fill in:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE` (server only; set in Vercel, not the client)
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_WEBHOOK_SECRET`
-   - `STRIPE_PRICE_ID` (for your subscription price)
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (optional if using Checkout only)
-   - `NEXT_PUBLIC_APP_URL` (e.g., https://yourapp.vercel.app)
+## 📊 Database Schema
 
-3. **Supabase SQL**: In the Supabase SQL editor, run the migration at `supabase/migrations/0001_init.sql` to create tables and RLS policies.
+The app uses a comprehensive PostgreSQL schema with:
+- **User Management**: Profiles, authentication, preferences
+- **Workout System**: Exercises, workouts, sets, personal records
+- **Nutrition System**: Foods, recipes, food logs, nutrition goals
+- **Social Features**: Communities, members, events, chat
+- **Gamification**: Badges, XP, leaderboards
+- **Analytics**: Workout analytics, body composition
+- **Monetization**: Subscriptions, promo codes
 
-4. **Stripe Webhook**: In your Stripe Dashboard, add a webhook endpoint:
-   - URL: `https://yourapp.vercel.app/api/stripe/webhook`
-   - Events: `checkout.session.completed`, `customer.subscription.deleted`
-   - Copy the signing secret to `STRIPE_WEBHOOK_SECRET`.
+## 🔧 Key Features Implementation
 
-5. **Deploy to Vercel**
-   - Add the same env vars in Vercel Project Settings -> Environment Variables.
-   - Push to GitHub, import the repo into Vercel, and deploy.
+### Authentication Flow
+1. User signs up/in with email or Google
+2. Profile is automatically created
+3. JWT tokens managed by Supabase
+4. Protected routes with AuthGuard
 
-## Pages Included
-- `/signin` – email magic link + OAuth (Google/GitHub)
-- `/dashboard` – quick actions and daily overview
-- `/workouts` – basic CRUD for exercises/sets (client-side for now)
-- `/food` – basic food log with totals (client-side for now)
-- `/analytics` – weekly metabolism placeholder
-- `/communities` – sample list
-- `/ai` – prompt box (premium upsell)
-- `/profile` – units + account stubs
+### Workout Tracking
+1. Browse exercise library with filters
+2. Start workout session
+3. Log sets with reps, weight, RPE
+4. Auto-detect personal records
+5. Save workout with analytics
 
-## Next Steps
-- Persist workout/food data in Supabase tables included in the migration.
-- Wire "Go Pro" to `/api/stripe/create-checkout-session` and pass user metadata.
-- Add RLS-enabled endpoints or use Supabase client with Row Level Security.
-- Build AI features (OpenAI, etc.) behind a premium check using `subscriptions` table.
+### Food Tracking
+1. Search food database
+2. Add foods to daily log
+3. Track macros against goals
+4. Categorize by meal type
+5. Visualize progress
+
+### Analytics
+1. Real-time data aggregation
+2. Interactive charts and graphs
+3. Time-based filtering
+4. Performance insights
+5. Progress tracking
+
+### Communities
+1. Create/join communities
+2. Share workout achievements
+3. Real-time chat
+4. Leaderboards
+5. Privacy controls
+
+## 🎯 Future Enhancements
+
+- **Mobile App**: React Native implementation
+- **Barcode Scanner**: Camera integration
+- **Recipe Database**: Expanded nutrition features
+- **Wearable Integration**: Apple Health, Google Fit
+- **Advanced AI**: Machine learning recommendations
+- **Video Workouts**: Exercise demonstration videos
+- **Social Challenges**: Community competitions
+- **Nutrition Coaching**: AI meal planning
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📞 Support
+
+For support, email support@fitnesspro.app or join our Discord community.
+
+---
+
+**Fit Fusion AI** - The most advanced fitness app on the market! 🚀💪

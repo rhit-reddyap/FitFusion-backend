@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { db } from "@/app/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { supabase } from "@/lib/supabaseClient";
 
 const STRIPE_URL = process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || "";
 const ALLOWLIST_CSV = (process.env.NEXT_PUBLIC_FF_ALLOWLIST || "").trim();
@@ -26,22 +25,29 @@ export function usePremium(user: { uid: string; email?: string | null } | null |
         setPremiumEnd(null);
         return;
       }
-      const ref = doc(db, "users", user.uid);
-      const snap = await getDoc(ref);
-      const data: any = snap.data() || {};
-      const end = data?.premium_end?.toDate?.() ?? (data?.premium_end ? new Date(data.premium_end) : null);
-      const premium = end === null || (end && end > new Date());
-      if (!snap.exists()) {
-        await setDoc(ref, {
-          uid: user.uid,
-          email: user.email ?? null,
-          createdAt: serverTimestamp(),
-          premium_end: null,
-          source: null,
-        });
+      
+      // Check if user has premium subscription in Supabase
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('subscription_tier, premium_end')
+        .eq('id', user.uid)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        if (active) {
+          setLoading(false);
+          setIsPremium(false);
+          setPremiumEnd(null);
+        }
+        return;
       }
+      
+      const end = profile?.premium_end ? new Date(profile.premium_end) : null;
+      const premium = profile?.subscription_tier === 'premium' || (end && end > new Date());
+      
       if (active) {
-        setPremiumEnd(end ?? null);
+        setPremiumEnd(end);
         setIsPremium(Boolean(premium));
         setLoading(false);
       }
@@ -59,24 +65,48 @@ export function usePremium(user: { uid: string; email?: string | null } | null |
     const code = String(codeInput || "").trim().toLowerCase();
     if (!code) return { ok: false, msg: "Enter a code." };
 
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, { uid: user.uid, email: user.email ?? null, createdAt: serverTimestamp() });
-    }
-
     if (code === "freshmanfriday") {
       const emailOk = user.email && allowlist.has(user.email.toLowerCase());
       if (!FF_OPEN && !emailOk) return { ok: false, msg: "This code is not enabled for this account." };
-      await updateDoc(ref, { premium_end: null, source: "freshmanfriday", updatedAt: serverTimestamp() });
-      setIsPremium(true); setPremiumEnd(null);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          subscription_tier: 'premium',
+          premium_end: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.uid);
+      
+      if (error) {
+        console.error('Error updating profile:', error);
+        return { ok: false, msg: "Error applying code. Please try again." };
+      }
+      
+      setIsPremium(true); 
+      setPremiumEnd(null);
       return { ok: true, msg: "Premium unlocked. Enjoy!" };
     }
 
     if (code === "cc") {
       const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      await updateDoc(ref, { premium_end: end, source: "cc", updatedAt: serverTimestamp() });
-      setIsPremium(true); setPremiumEnd(end);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          subscription_tier: 'premium',
+          premium_end: end.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.uid);
+      
+      if (error) {
+        console.error('Error updating profile:', error);
+        return { ok: false, msg: "Error applying code. Please try again." };
+      }
+      
+      setIsPremium(true); 
+      setPremiumEnd(end);
       return { ok: true, msg: "7‑day premium trial activated." };
     }
 

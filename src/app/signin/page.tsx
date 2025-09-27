@@ -1,58 +1,61 @@
 "use client";
 
-import { supabase } from "@/lib/supabaseClient";
-import { Github, Mail } from "lucide-react";
-import { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/AuthProvider';
+import LoginForm from '@/components/auth/LoginForm';
+import SignupForm from '@/components/auth/SignupForm';
+import { DEV_MODE } from '@/lib/devMode';
 
 export default function SignInPage() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLogin, setIsLogin] = useState(true);
+  const { user, loading, signInAsAdmin } = useAuth();
+  const router = useRouter();
 
-  async function signInEmail(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` }
-    });
-    if (error) setError(error.message);
-    else setSent(true);
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  async function oauth(provider: "google" | "github") {
-    await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard` } });
+  if (user) {
+    return null; // Will redirect
   }
 
   return (
-    <div className="container py-12 max-w-md">
-      <div className="card">
-        <h1 className="text-2xl font-semibold mb-4">Sign in</h1>
-        {sent ? (
-          <p>Check your email for a magic link.</p>
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        {isLogin ? (
+          <LoginForm onToggleMode={() => setIsLogin(false)} />
         ) : (
-          <form onSubmit={signInEmail} className="space-y-3">
-            <input
-              className="input"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-            <button className="btn w-full" type="submit">
-              <Mail size={18} /> Send magic link
-            </button>
-          </form>
+          <SignupForm onToggleMode={() => setIsLogin(true)} />
         )}
-        <div className="my-4 h-px bg-gray-200" />
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => oauth("google")} className="btn-outline w-full py-2 rounded-xl">Google</button>
-          <button onClick={() => oauth("github")} className="btn-outline w-full py-2 rounded-xl flex items-center justify-center gap-2">
-            <Github size={18}/> GitHub
-          </button>
-        </div>
+        
+        {DEV_MODE && (
+          <div className="mt-8 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+            <h3 className="text-yellow-400 font-semibold mb-2">Development Mode</h3>
+            <p className="text-yellow-200 text-sm mb-4">
+              Since Supabase isn't configured, you can use the admin account to test all features:
+            </p>
+            <button
+              onClick={signInAsAdmin}
+              className="w-full bg-yellow-500 text-black py-2 px-4 rounded-lg font-medium hover:bg-yellow-400 transition"
+            >
+              Sign In as Admin
+            </button>
+            <p className="text-yellow-200 text-xs mt-2">
+              Admin has access to all premium features including cookbook, analytics, and AI plans.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

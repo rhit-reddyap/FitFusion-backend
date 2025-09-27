@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Lock, Crown, KeyRound } from "lucide-react";
-import { usePremium } from "@/app/hooks/usePremium";
-import { useAuthContext } from "@/components/AuthGuard"; // assuming your AuthGuard exposes context
+import { usePremium } from "@/hooks/usePremium";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Props = {
   title?: string;
@@ -11,8 +11,8 @@ type Props = {
 };
 
 export default function PaywallGate({ title = "Premium Feature", children }: Props) {
-  // Get the current Firebase user from your AuthGuard (adjust import if different)
-  const { user } = useAuthContext(); // { uid, email } or null
+  // Get the current user from Supabase auth
+  const { user } = useAuth();
   const { loading, isPremium, openCheckout, applyCode } = usePremium(user);
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState("");
