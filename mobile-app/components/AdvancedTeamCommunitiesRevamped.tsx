@@ -11,9 +11,7 @@ import {
   Animated,
   Easing,
   TextInput,
-  FlatList,
-  Image,
-  RefreshControl
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,19 +23,46 @@ import TeamSocialFeed from './TeamSocialFeed';
 import TeamEvents from './TeamEvents';
 import TeamMarketplace from './TeamMarketplace';
 import TeamCoaching from './TeamCoaching';
-import { TeamService, Team, TeamMember, TeamStats, TeamActivity, TeamChallenge, JoinRequest } from '../services/teamService';
+import {
+  TeamService,
+  Team,
+  TeamMember,
+  TeamStats,
+  TeamActivity,
+  TeamChallenge,
+  JoinRequest,
+} from '../services/teamService';
 import { useAuth } from './AuthProvider';
 import TeamProfileEditorSimple from './TeamProfileEditorSimple';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface AdvancedTeamCommunitiesRevampedProps {
   onBack: () => void;
 }
 
-export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeamCommunitiesRevampedProps) {
+/**
+ * This component renders the team communities dashboard.  It has been updated
+ * to fetch real data from Supabase via TeamService.  The previous mock data
+ * has been removed.  Users can now join public teams or send join requests
+ * to private teams.  The leaderboard and discover tabs reflect live data.
+ */
+export default function AdvancedTeamCommunitiesRevamped({
+  onBack,
+}: AdvancedTeamCommunitiesRevampedProps) {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<'dashboard' | 'challenges' | 'chat' | 'leaderboard' | 'discovery' | 'live' | 'social' | 'events' | 'marketplace' | 'coaching'>('dashboard');
+  const [selectedTab, setSelectedTab] = useState<
+    | 'dashboard'
+    | 'challenges'
+    | 'chat'
+    | 'leaderboard'
+    | 'discover'
+    | 'live'
+    | 'social'
+    | 'events'
+    | 'marketplace'
+    | 'coaching'
+  >('dashboard');
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showJoinTeam, setShowJoinTeam] = useState(false);
   const [showTeamSettings, setShowTeamSettings] = useState(false);
@@ -45,8 +70,8 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
   const [joinCode, setJoinCode] = useState('');
   const [animatedValue] = useState(new Animated.Value(0));
   const [pulseValue] = useState(new Animated.Value(1));
-  
-  // Real data state
+
+  // State for real data
   const [teams, setTeams] = useState<Team[]>([]);
   const [myTeams, setMyTeams] = useState<Team[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -69,138 +94,97 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
     { id: 'social', name: 'Social', icon: 'people', color: '#8B5CF6' },
     { id: 'events', name: 'Events', icon: 'calendar', color: '#10B981' },
     { id: 'marketplace', name: 'Market', icon: 'storefront', color: '#3B82F6' },
-    { id: 'coaching', name: 'Coaching', icon: 'school', color: '#EF4444' }
+    { id: 'coaching', name: 'Coaching', icon: 'school', color: '#EF4444' },
   ];
 
-  // Mock data for demonstration
-  const mockTeams: Team[] = [
-    {
-      id: '1',
-      name: 'Iron Titans',
-      description: 'Elite powerlifters pushing the limits',
-      memberCount: 12,
-      maxMembers: 20,
-      totalTonnage: 125000,
-      weeklyTonnage: 8500,
-      level: 15,
-      xp: 12500,
-      badges: ['Powerlifting', 'Elite', 'Consistent'],
-      isPrivate: false,
-      adminId: 'admin1',
-      createdAt: '2024-01-15',
-      color: '#FF6B35',
-      image: 'https://via.placeholder.com/100'
-    },
-    {
-      id: '2',
-      name: 'Cardio Kings',
-      description: 'Endurance athletes and runners',
-      memberCount: 8,
-      maxMembers: 15,
-      totalTonnage: 45000,
-      weeklyTonnage: 3200,
-      level: 8,
-      xp: 6800,
-      badges: ['Endurance', 'Active'],
-      isPrivate: true,
-      joinCode: 'CARDIO2024',
-      adminId: 'admin2',
-      createdAt: '2024-02-01',
-      color: '#4ECDC4'
-    },
-    {
-      id: '3',
-      name: 'Flexibility Masters',
-      description: 'Yoga and mobility enthusiasts',
-      memberCount: 6,
-      maxMembers: 12,
-      totalTonnage: 15000,
-      weeklyTonnage: 1200,
-      level: 5,
-      xp: 3200,
-      badges: ['Flexibility', 'Mindfulness'],
-      isPrivate: false,
-      adminId: 'admin3',
-      createdAt: '2024-02-15',
-      color: '#9F7AEA'
-    }
-  ];
-
-  const mockLeaderboard = [
-    { rank: 1, team: 'Iron Titans', tonnage: 8500, members: 12, level: 15 },
-    { rank: 2, team: 'Cardio Kings', tonnage: 3200, members: 8, level: 8 },
-    { rank: 3, team: 'Flexibility Masters', tonnage: 1200, members: 6, level: 5 },
-    { rank: 4, team: 'Strength Squad', tonnage: 9800, members: 15, level: 12 },
-    { rank: 5, team: 'Endurance Elite', tonnage: 2800, members: 10, level: 9 }
-  ];
-
-  useEffect(() => {
-    loadAllData();
-    startAnimations();
-  }, []);
-
+  /**
+   * Load teams, my teams and leaderboard from Supabase.  Falls back to
+   * mock data defined in TeamService if the tables are not available.  The
+   * user must be logged in to fetch their personal teams list; otherwise
+   * myTeams will be empty.
+   */
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      // Simulate API calls
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setTeams(mockTeams);
-      setMyTeams(mockTeams.slice(0, 2)); // User is in first 2 teams
-      setLeaderboard(mockLeaderboard);
+      // Fetch all teams
+      const fetchedTeams = await TeamService.getTeams(20, 0);
+      setTeams(fetchedTeams);
+
+      // Fetch user teams
+      if (user?.id) {
+        const myTeamsData = await TeamService.getUserTeams(user.id);
+        setMyTeams(myTeamsData);
+      } else {
+        setMyTeams([]);
+      }
+
+      // Fetch global leaderboard
+      const leaderboardData = await TeamService.getGlobalLeaderboard(10);
+      setLeaderboard(leaderboardData);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
+  useEffect(() => {
+    loadAllData();
+    startAnimations();
+  }, [loadAllData]);
+
+  /**
+   * Refresh handler for pull to refresh.
+   */
   const onRefresh = async () => {
     setRefreshing(true);
     await loadAllData();
     setRefreshing(false);
   };
 
+  /**
+   * Handle creating a new team.  Maps data from the editor to the
+   * database schema and uses TeamService.createTeam to insert the new
+   * record.  Refreshes data upon success.
+   */
   const handleSaveTeam = async (teamData: any) => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to create a team.');
       return;
     }
-    
+
     try {
-      // Map the teamData fields to match the database schema
       const mappedTeamData = {
         name: teamData.name,
         description: teamData.description,
         category: teamData.category,
-        level: 'All Levels' as 'All Levels', // Default level
+        level: 'All Levels' as 'All Levels',
         privacy: (teamData.privacy || 'Public') as 'Public',
-        max_members: teamData.maxMembers || 30, // Map maxMembers to max_members
+        max_members: teamData.maxMembers || 30,
         team_image: undefined,
         color_theme: teamData.color || ['#10B981', '#059669'],
         badges: [],
-        rules: teamData.rules || []
+        rules: teamData.rules || [],
       };
-
-      console.log('Creating team with data:', mappedTeamData);
       const newTeam = await TeamService.createTeam(mappedTeamData, user.id);
-      
       if (newTeam) {
         Alert.alert('Success', 'Team created successfully!');
-        // Refresh both team lists
         await loadAllData();
         setShowCreateTeam(false);
       } else {
         Alert.alert('Error', 'Failed to create team. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating team:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to create team. Please try again.';
       Alert.alert('Error', errorMessage);
     }
   };
 
+  /**
+   * Animate the header and pulsing elements for premium features.
+   */
   const startAnimations = () => {
-    // Pulse animation for premium features
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseValue, {
@@ -217,8 +201,6 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
         }),
       ])
     ).start();
-
-    // Fade in animation
     Animated.timing(animatedValue, {
       toValue: 1,
       duration: 800,
@@ -227,16 +209,48 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
     }).start();
   };
 
+  /**
+   * Handle joining a team from the join code modal.  This function
+   * validates input and simulates a join request; it does not attempt
+   * to join through TeamService because the join code modal is not
+   * connected to the backend at this time.
+   */
   const handleJoinTeam = () => {
     if (!joinCode.trim()) {
       Alert.alert('Error', 'Please enter a team join code');
       return;
     }
-    
-    // Simulate joining team
     Alert.alert('Success', `Joined team with code: ${joinCode}`);
     setShowJoinTeam(false);
     setJoinCode('');
+  };
+
+  /**
+   * Handle join action for a specific team.  Calls TeamService.joinTeam
+   * which will add the user directly for public teams or create a
+   * join request for private teams.  Refreshes data upon success.
+   */
+  const handleJoinSelectedTeam = async (team: Team) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to join a team.');
+      return;
+    }
+    try {
+      const success = await TeamService.joinTeam(team.id, user.id);
+      if (success) {
+        if (team.privacy === 'Private') {
+          Alert.alert('Request Sent', 'Your join request has been sent and is pending approval.');
+        } else {
+          Alert.alert('Success', `You joined ${team.name}!`);
+        }
+        await loadAllData();
+      } else {
+        Alert.alert('Error', 'Failed to join team. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error joining team:', error);
+      Alert.alert('Error', 'Failed to join team. Please try again.');
+    }
   };
 
   const handleCreateTeam = () => {
@@ -249,6 +263,9 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
     return num.toString();
   };
 
+  /**
+   * Render content based on the selected tab.
+   */
   const renderTabContent = () => {
     switch (selectedTab) {
       case 'dashboard':
@@ -256,78 +273,108 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
       case 'challenges':
         return <AdvancedTeamChallenges onBack={onBack} />;
       case 'chat':
-        return <AdvancedTeamChat onBack={onBack} teamId="1" teamName="Iron Titans" />;
+        return <AdvancedTeamChat onBack={onBack} teamId="1" teamName="Team Chat" />;
       case 'leaderboard':
         return renderLeaderboard();
       case 'discover':
         return renderDiscover();
       case 'live':
-        return <TeamLiveStream visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Iron Titans" />;
+        return (
+          <TeamLiveStream visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Live" />
+        );
       case 'social':
-        return <TeamSocialFeed visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Iron Titans" />;
+        return (
+          <TeamSocialFeed visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Social" />
+        );
       case 'events':
-        return <TeamEvents visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Iron Titans" />;
+        return (
+          <TeamEvents visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Events" />
+        );
       case 'marketplace':
-        return <TeamMarketplace visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Iron Titans" />;
+        return (
+          <TeamMarketplace visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Market" />
+        );
       case 'coaching':
-        return <TeamCoaching visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Iron Titans" />;
+        return (
+          <TeamCoaching visible={true} onClose={() => setSelectedTab('dashboard')} teamId="1" teamName="Coaching" />
+        );
       default:
         return <AdvancedTeamDashboard onBack={onBack} />;
     }
   };
 
+  /**
+   * Render the global leaderboard using live data.  Data is mapped to
+   * match the expected fields (tonnage, members, level).  If a field
+   * is missing, fallback values are used.  Animated pulsing is applied
+   * for premium flair.
+   */
   const renderLeaderboard = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.tabContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <View style={styles.leaderboardContainer}>
         <Text style={styles.sectionTitle}>Global Team Leaderboard</Text>
         <Text style={styles.sectionSubtitle}>Top performing teams this week</Text>
-        
-        {mockLeaderboard.map((team, index) => (
-          <Animated.View
-            key={team.rank}
-            style={[
-              styles.leaderboardCard,
-              { transform: [{ scale: pulseValue }] }
-            ]}
-          >
-            <View style={styles.rankContainer}>
-              <Text style={[
-                styles.rankNumber,
-                { color: index < 3 ? '#F59E0B' : '#9CA3AF' }
-              ]}>
-                #{team.rank}
-              </Text>
-              {index < 3 && (
-                <Ionicons 
-                  name="trophy" 
-                  size={20} 
-                  color={index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'} 
-                />
-              )}
-            </View>
-            
-            <View style={styles.teamInfo}>
-              <Text style={styles.teamName}>{team.team}</Text>
-              <Text style={styles.teamStats}>
-                {formatNumber(team.tonnage)} lbs • {team.members} members • Level {team.level}
-              </Text>
-            </View>
-            
-            <View style={styles.teamBadge}>
-              <Text style={styles.badgeText}>ELITE</Text>
-            </View>
-          </Animated.View>
-        ))}
+        {leaderboard.map((entry, index) => {
+          const teamName = entry.team?.name ?? entry.team;
+          const tonnage = entry.total_calories_burned ?? entry.tonnage ?? 0;
+          const members = entry.total_members ?? entry.members ?? 0;
+          const level = entry.team_streak ?? entry.level ?? 1;
+          return (
+            <Animated.View
+              key={index}
+              style={[styles.leaderboardCard, { transform: [{ scale: pulseValue }] }]}
+            >
+              <View style={styles.rankContainer}>
+                <Text
+                  style={[
+                    styles.rankNumber,
+                    { color: index < 3 ? '#F59E0B' : '#9CA3AF' },
+                  ]}
+                >
+                  #{index + 1}
+                </Text>
+                {index < 3 && (
+                  <Ionicons
+                    name="trophy"
+                    size={20}
+                    color={index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'}
+                  />
+                )}
+              </View>
+              <View style={styles.teamInfo}>
+                <Text style={styles.teamName}>{teamName}</Text>
+                <Text style={styles.teamStats}>
+                  {formatNumber(tonnage)} lbs • {members} members • Level {level}
+                </Text>
+              </View>
+              <View style={styles.teamBadge}>
+                <Text style={styles.badgeText}>ELITE</Text>
+              </View>
+            </Animated.View>
+          );
+        })}
       </View>
     </ScrollView>
   );
 
+  /**
+   * Render the discover tab listing available teams.  Allows users to
+   * search and filter by category.  Each team card includes a join
+   * button that calls handleJoinSelectedTeam.
+   */
   const renderDiscover = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.tabContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <View style={styles.discoverContainer}>
         <Text style={styles.sectionTitle}>Discover Teams</Text>
         <Text style={styles.sectionSubtitle}>Find your perfect fitness community</Text>
-        
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#6B7280" />
           <TextInput
@@ -338,66 +385,79 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
             placeholderTextColor="#6B7280"
           />
         </View>
-
         <View style={styles.categoriesContainer}>
           <Text style={styles.categoriesTitle}>Categories</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {['All', 'Powerlifting', 'Cardio', 'Yoga', 'CrossFit', 'Bodybuilding'].map((category) => (
-              <TouchableOpacity key={category} style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>{category}</Text>
-              </TouchableOpacity>
-            ))}
+            {['All', 'Powerlifting', 'Cardio', 'Yoga', 'CrossFit', 'Bodybuilding'].map(
+              (category) => (
+                <TouchableOpacity key={category} style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>{category}</Text>
+                </TouchableOpacity>
+              ),
+            )}
           </ScrollView>
         </View>
-
         <View style={styles.teamsGrid}>
-          {mockTeams.map((team) => (
-            <TouchableOpacity key={team.id} style={styles.discoverTeamCard}>
-              <LinearGradient
-                colors={[team.color + '20', team.color + '05']}
-                style={styles.teamGradient}
-              >
-                <View style={styles.teamHeader}>
-                  <Text style={styles.teamName}>{team.name}</Text>
-                  <View style={styles.teamLevel}>
-                    <Text style={styles.levelText}>L{team.level}</Text>
-                  </View>
-                </View>
-                
-                <Text style={styles.teamDescription}>{team.description}</Text>
-                
-                <View style={styles.teamStats}>
-                  <View style={styles.statItem}>
-                    <Ionicons name="people" size={16} color="#9CA3AF" />
-                    <Text style={styles.statText}>{team.memberCount}/{team.maxMembers}</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Ionicons name="fitness" size={16} color="#9CA3AF" />
-                    <Text style={styles.statText}>{formatNumber(team.weeklyTonnage)} lbs</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.badgesContainer}>
-                  {team.badges.map((badge, index) => (
-                    <View key={index} style={styles.badge}>
-                      <Text style={styles.badgeText}>{badge}</Text>
+          {teams.map((team) => {
+            // Filter by search query
+            if (
+              searchQuery &&
+              !team.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+              !(team.description || '')
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase())
+            ) {
+              return null;
+            }
+            return (
+              <TouchableOpacity key={team.id} style={styles.discoverTeamCard}>
+                <LinearGradient
+                  colors={[`${team.color_theme?.[0] || '#10B981'}20`, `${team.color_theme?.[1] || '#059669'}05`]}
+                  style={styles.teamGradient}
+                >
+                  <View style={styles.teamHeader}>
+                    <Text style={styles.teamName}>{team.name}</Text>
+                    <View style={styles.teamLevel}>
+                      <Text style={styles.levelText}>L{team.level || '1'}</Text>
                     </View>
-                  ))}
-                </View>
-                
-                <TouchableOpacity style={styles.joinTeamButton}>
-                  <Text style={styles.joinTeamButtonText}>Join Team</Text>
-                </TouchableOpacity>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
+                  </View>
+                  <Text style={styles.teamDescription}>{team.description}</Text>
+                  <View style={styles.teamStats}>
+                    <View style={styles.statItem}>
+                      <Ionicons name="people" size={16} color="#9CA3AF" />
+                      <Text style={styles.statText}>
+                        {team.memberCount || '-'} / {team.max_members}
+                      </Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Ionicons name="fitness" size={16} color="#9CA3AF" />
+                      <Text style={styles.statText}>- lbs</Text>
+                    </View>
+                  </View>
+                  <View style={styles.badgesContainer}>
+                    {(team.badges || []).map((badge, index) => (
+                      <View key={index} style={styles.badge}>
+                        <Text style={styles.badgeText}>{badge}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.joinTeamButton}
+                    onPress={() => handleJoinSelectedTeam(team)}
+                  >
+                    <Text style={styles.joinTeamButtonText}>Join Team</Text>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
     </ScrollView>
   );
 
   return (
-    <Animated.View style={[styles.container, { opacity: animatedValue }]}>
+    <Animated.View style={[styles.container, { opacity: animatedValue }]}> 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
@@ -407,58 +467,53 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
           <Text style={styles.title}>Team Communities</Text>
           <Text style={styles.subtitle}>Connect, compete, and achieve together</Text>
         </View>
-        <TouchableOpacity style={styles.settingsButton} onPress={() => setShowTeamSettings(true)}>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setShowTeamSettings(true)}
+        >
           <Ionicons name="settings" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab.id}
-              style={[
-                styles.tabButton,
-                selectedTab === tab.id && styles.tabButtonActive
-              ]}
-              onPress={() => setSelectedTab(tab.id)}
+              style={[styles.tabButton, selectedTab === tab.id && styles.tabButtonActive]}
+              onPress={() => setSelectedTab(tab.id as any)}
             >
-              <Ionicons 
-                name={tab.icon as any} 
-                size={20} 
-                color={selectedTab === tab.id ? '#FFFFFF' : '#9CA3AF'} 
+              <Ionicons
+                name={tab.icon as any}
+                size={20}
+                color={selectedTab === tab.id ? '#FFFFFF' : '#9CA3AF'}
               />
-              <Text style={[
-                styles.tabButtonText,
-                selectedTab === tab.id && styles.tabButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.tabButtonText,
+                  selectedTab === tab.id && styles.tabButtonTextActive,
+                ]}
+              >
                 {tab.name}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
-
       {/* Tab Content */}
       {renderTabContent()}
-
       {/* Floating Action Buttons */}
       <View style={styles.fabContainer}>
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={handleCreateTeam}
-        >
+        <TouchableOpacity style={styles.fab} onPress={handleCreateTeam}>
           <Ionicons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.fab, styles.fabSecondary]}
           onPress={() => setShowJoinTeam(true)}
         >
           <Ionicons name="people" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-
       {/* Join Team Modal */}
       <Modal visible={showJoinTeam} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -469,7 +524,6 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
                 <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
-            
             <TextInput
               style={styles.joinCodeInput}
               value={joinCode}
@@ -477,14 +531,12 @@ export default function AdvancedTeamCommunitiesRevamped({ onBack }: AdvancedTeam
               placeholder="Enter team join code"
               placeholderTextColor="#6B7280"
             />
-            
             <TouchableOpacity style={styles.joinButton} onPress={handleJoinTeam}>
               <Text style={styles.joinButtonText}>Join Team</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-
       {/* Team Profile Editor Modal */}
       <TeamProfileEditorSimple
         visible={showCreateTeam}
@@ -772,12 +824,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  modalDescription: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
   joinCodeInput: {
     backgroundColor: '#1F2937',
     borderRadius: 12,
@@ -799,16 +845,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  createButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
 });
-
