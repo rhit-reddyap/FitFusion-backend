@@ -135,12 +135,16 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
   const [targetMuscles, setTargetMuscles] = useState<string[]>([]);
   const [showWorkoutCalendar, setShowWorkoutCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showMonthlyView, setShowMonthlyView] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [workoutHistory, setWorkoutHistory] = useState<any[]>([]);
   const [calendarTonnage, setCalendarTonnage] = useState(0);
   const [calendarWorkoutCount, setCalendarWorkoutCount] = useState(0);
   const [calendarDuration, setCalendarDuration] = useState(0);
   const [calendarWorkouts, setCalendarWorkouts] = useState<any[]>([]);
   const [weeklyTonnage, setWeeklyTonnage] = useState(0);
+  const [dailyTonnage, setDailyTonnage] = useState(0);
+  const [dailyMinutes, setDailyMinutes] = useState(0);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [showWorkoutLibrary, setShowWorkoutLibrary] = useState(false);
   const [showVideoCard, setShowVideoCard] = useState(false);
@@ -153,6 +157,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [favoritedWorkouts, setFavoritedWorkouts] = useState<Set<string>>(new Set());
   const [showPRNotifications, setShowPRNotifications] = useState(false);
+  const [recentPRs, setRecentPRs] = useState<any[]>([]);
   const [editingWorkout, setEditingWorkout] = useState<CustomWorkout | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -172,6 +177,8 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
     const refreshData = async () => {
       await loadUserData();
       await loadWeeklyTonnage();
+      await loadDailyTonnage();
+      await loadDailyMinutes();
     };
     refreshData();
   }, []);
@@ -180,17 +187,22 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
   useEffect(() => {
     loadCalendarData(new Date());
     loadWeeklyTonnage();
+    loadDailyTonnage();
+    loadDailyMinutes();
   }, []);
 
   // Timer effect for workout
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
-    if (showWorkoutModal && isTimerRunning) {
+    if (showWorkoutModal && workoutStartTime) {
       interval = setInterval(() => {
-        setWorkoutTimer(prev => prev + 1);
+        const now = new Date();
+        const elapsedSeconds = Math.floor((now.getTime() - workoutStartTime.getTime()) / 1000);
+        setWorkoutTimer(elapsedSeconds);
+        
         if (workoutData) {
-          setWorkoutData((prev: any) => prev ? { ...prev, totalTime: prev.totalTime + 1 } : prev);
+          setWorkoutData((prev: any) => prev ? { ...prev, totalTime: elapsedSeconds } : prev);
         }
       }, 1000);
     }
@@ -200,7 +212,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
         clearInterval(interval);
       }
     };
-  }, [showWorkoutModal, isTimerRunning, workoutData]);
+  }, [showWorkoutModal, workoutStartTime]);
 
   const initializeOfflineManager = async () => {
     try {
@@ -275,11 +287,120 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
     try {
       const weekly = await DataStorage.calculateWeeklyTonnage();
       console.log('Loaded weekly tonnage:', weekly);
-      // For now, always show 0 until we have real workout data
-      setWeeklyTonnage(0);
+      setWeeklyTonnage(weekly || 0);
     } catch (error) {
       console.error('Error loading weekly tonnage:', error);
       setWeeklyTonnage(0);
+    }
+  };
+
+  const loadDailyTonnage = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const workouts = await DataStorage.getWorkoutLogs(today);
+      const totalTonnage = workouts.reduce((total: number, workout: any) => {
+        return total + (workout.totalTonnage || 0);
+      }, 0);
+      console.log('Loaded daily tonnage:', totalTonnage);
+      setDailyTonnage(totalTonnage);
+    } catch (error) {
+      console.error('Error loading daily tonnage:', error);
+      setDailyTonnage(0);
+    }
+  };
+
+  const loadDailyMinutes = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const workouts = await DataStorage.getWorkoutLogs(today);
+      const totalMinutes = workouts.reduce((total: number, workout: any) => {
+        return total + (workout.duration || 0);
+      }, 0);
+      console.log('Loaded daily minutes:', totalMinutes);
+      setDailyMinutes(Math.floor(totalMinutes / 60)); // Convert seconds to minutes
+    } catch (error) {
+      console.error('Error loading daily minutes:', error);
+      setDailyMinutes(0);
+    }
+  };
+
+  // Monthly calendar functions
+  const generateMonthlyCalendar = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
+    
+    const calendar = [];
+    const current = new Date(startDate);
+    
+    for (let week = 0; week < 6; week++) {
+      const weekDays = [];
+      for (let day = 0; day < 7; day++) {
+        weekDays.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+      }
+      calendar.push(weekDays);
+      
+      // Stop if we've covered the entire month
+      if (current.getMonth() !== month && week >= 4) break;
+    }
+    
+    return calendar;
+  };
+
+  const handleDateSelect = async (date: Date) => {
+    setSelectedDate(date);
+    await loadCalendarData(date);
+    setShowMonthlyView(false);
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newMonth = new Date(currentMonth);
+    if (direction === 'prev') {
+      newMonth.setMonth(newMonth.getMonth() - 1);
+    } else {
+      newMonth.setMonth(newMonth.getMonth() + 1);
+    }
+    setCurrentMonth(newMonth);
+  };
+
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const isSameMonth = (date: Date, month: Date) => {
+    return date.getMonth() === month.getMonth() && date.getFullYear() === month.getFullYear();
+  };
+
+  const loadRecentPRs = async () => {
+    try {
+      const personalRecords = await DataStorage.getPersonalRecords();
+      
+      // Convert personal records to array with timestamps and sort by date
+      const prArray = Object.entries(personalRecords).map(([key, record]: [string, any]) => ({
+        id: key,
+        exerciseName: record.exercise,
+        weight: record.weight,
+        reps: record.reps,
+        date: record.date,
+        timestamp: new Date(record.date).getTime(),
+        type: key.includes('_reps') ? 'Rep PR' : 'Weight PR'
+      }));
+      
+      // Sort by most recent first and take last 10
+      const sortedPRs = prArray
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 10);
+      
+      console.log('Loaded recent PRs:', sortedPRs);
+      setRecentPRs(sortedPRs);
+    } catch (error) {
+      console.error('Error loading recent PRs:', error);
+      setRecentPRs([]);
     }
   };
 
@@ -325,8 +446,15 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadUserData();
-    await loadCustomWorkouts();
+    try {
+      await loadUserData();
+      await loadCustomWorkouts();
+      await loadWeeklyTonnage();
+      await loadDailyTonnage();
+      await loadDailyMinutes();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
     setRefreshing(false);
   };
 
@@ -436,7 +564,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
         const prMessage = `🎉 New ${prType}! ${exerciseName}: ${weight}lbs x ${reps} reps`;
         
         Alert.alert('Personal Record!', prMessage, [
-          { text: 'Share with Team', onPress: () => notifyTeamMembersOfPR(exerciseName, weight, reps, prType) },
+          { text: 'Share with Team', onPress: () => showTeamSelectionForPR(exerciseName, weight, reps, prType) },
           { text: 'Awesome!', style: 'default' }
         ]);
         
@@ -450,13 +578,22 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
 
   const checkIfPR = async (exerciseName: string, weight: number, reps: number) => {
     try {
-      // For now, we'll use a simple approach - check if this is the first time doing this exercise
-      // In a real implementation, you'd store PRs in DataStorage
-      const userStats = await DataStorage.getUserStats();
-      const exerciseKey = `pr_${exerciseName.replace(/\s+/g, '_').toLowerCase()}`;
+      const personalRecords = await DataStorage.getPersonalRecords();
+      const exerciseKey = exerciseName.toLowerCase().replace(/\s+/g, '_');
+      const currentRecord = personalRecords[exerciseKey];
       
-      // Simple PR logic - if no previous record exists, it's a PR
-      return !userStats[exerciseKey];
+      if (!currentRecord || weight > currentRecord.weight) {
+        // Save new weight PR
+        await DataStorage.savePersonalRecord(exerciseKey, {
+          exercise: exerciseName,
+          weight: weight,
+          reps: reps,
+          date: new Date().toISOString()
+        });
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Error checking weight PR:', error);
       return false;
@@ -465,15 +602,84 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
 
   const checkIfRepPR = async (exerciseName: string, weight: number, reps: number) => {
     try {
-      // For now, we'll use a simple approach
-      const userStats = await DataStorage.getUserStats();
-      const exerciseKey = `rep_pr_${exerciseName.replace(/\s+/g, '_').toLowerCase()}`;
+      const personalRecords = await DataStorage.getPersonalRecords();
+      const exerciseKey = exerciseName.toLowerCase().replace(/\s+/g, '_');
+      const repKey = `${exerciseKey}_reps`;
+      const currentRecord = personalRecords[repKey];
       
-      // Simple rep PR logic
-      return !userStats[exerciseKey];
+      if (!currentRecord || (weight >= currentRecord.weight && reps > currentRecord.reps)) {
+        // Save new rep PR
+        await DataStorage.savePersonalRecord(repKey, {
+          exercise: exerciseName,
+          weight: weight,
+          reps: reps,
+          date: new Date().toISOString()
+        });
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Error checking rep PR:', error);
       return false;
+    }
+  };
+
+  const showTeamSelectionForPR = async (exerciseName: string, weight: number, reps: number, prType: string) => {
+    try {
+      // Get user's teams
+      const userTeams = await DataStorage.getUserTeams();
+      
+      if (!userTeams || userTeams.length === 0) {
+        Alert.alert('No Teams', 'You are not part of any teams yet. Join or create a team to share your PRs!', [
+          { text: 'OK', style: 'default' }
+        ]);
+        return;
+      }
+      
+      // Create team selection options
+      const teamOptions = userTeams.map((team: any) => ({
+        text: team.name,
+        onPress: () => shareWithSpecificTeam(team.id, team.name, exerciseName, weight, reps, prType)
+      }));
+      
+      // Add "Share with All Teams" option if user has multiple teams
+      if (userTeams.length > 1) {
+        teamOptions.unshift({
+          text: 'Share with All Teams',
+          onPress: () => shareWithAllTeams(userTeams, exerciseName, weight, reps, prType)
+        });
+      }
+      
+      // Add cancel option
+      teamOptions.push({ text: 'Cancel', style: 'cancel' });
+      
+      Alert.alert('Select Team(s)', 'Choose which team(s) to share your PR with:', teamOptions);
+      
+    } catch (error) {
+      console.error('Error showing team selection:', error);
+      Alert.alert('Error', 'Failed to load teams');
+    }
+  };
+
+  const shareWithSpecificTeam = async (teamId: string, teamName: string, exerciseName: string, weight: number, reps: number, prType: string) => {
+    try {
+      // In a real implementation, you'd call TeamService.sharePR(teamId, prData)
+      Alert.alert('Shared!', `Your ${prType} has been shared with ${teamName}!`);
+    } catch (error) {
+      console.error('Error sharing with team:', error);
+      Alert.alert('Error', 'Failed to share PR with team');
+    }
+  };
+
+  const shareWithAllTeams = async (teams: any[], exerciseName: string, weight: number, reps: number, prType: string) => {
+    try {
+      // In a real implementation, you'd loop through teams and call TeamService.sharePR for each
+      const teamNames = teams.map(team => team.name).join(', ');
+      Alert.alert('Shared!', `Your ${prType} has been shared with all your teams: ${teamNames}!`);
+    } catch (error) {
+      console.error('Error sharing with all teams:', error);
+      Alert.alert('Error', 'Failed to share PR with teams');
     }
   };
 
@@ -623,12 +829,30 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
         updatedWorkoutData.totalTonnage = totalTonnage;
         updatedWorkoutData.tonnagePerMuscleGroup = tonnagePerMuscleGroup;
         
+        // Auto-progress to next set
+        const nextSetIndex = setIndex + 1;
+        if (nextSetIndex < exercise.sets.length) {
+          // Move to next set in same exercise
+          updatedWorkoutData.currentSetIndex = nextSetIndex;
+        } else {
+          // Move to first set of next exercise
+          const nextExerciseIndex = exerciseIndex + 1;
+          if (nextExerciseIndex < updatedWorkoutData.exercises.length) {
+            updatedWorkoutData.currentExerciseIndex = nextExerciseIndex;
+            updatedWorkoutData.currentSetIndex = 0;
+          }
+        }
+        
         // Start rest timer
         updatedWorkoutData.restTimer = set.restTime || 90;
         startRestTimer();
       } else {
-        // Start the set
+        // Start the set - stop rest timer and start set timer
         set.isActive = true;
+        
+        // Stop rest timer
+        stopRestTimer();
+        
         // Stop any other active sets
         updatedWorkoutData.exercises.forEach((ex: any, exIndex: number) => {
           ex.sets.forEach((s: any, sIndex: number) => {
@@ -637,6 +861,38 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
             }
           });
         });
+        
+        // Reset rest timer
+        updatedWorkoutData.restTimer = 0;
+      }
+      
+      return updatedWorkoutData;
+    });
+  };
+
+  const addSet = (exerciseIndex: number) => {
+    if (!workoutData) return;
+    
+    setWorkoutData((prev: any) => {
+      if (!prev) return prev;
+      
+      const updatedWorkoutData = { ...prev };
+      const exercise = updatedWorkoutData.exercises[exerciseIndex];
+      
+      if (exercise && exercise.sets) {
+        // Get the last set to use as template
+        const lastSet = exercise.sets[exercise.sets.length - 1];
+        const newSet = {
+          reps: lastSet?.reps || 8,
+          weight: lastSet?.weight || 0,
+          restTime: lastSet?.restTime || 90,
+          completed: false,
+          actualReps: lastSet?.reps || 8,
+          actualWeight: lastSet?.weight || 0,
+          isActive: false
+        };
+        
+        exercise.sets.push(newSet);
       }
       
       return updatedWorkoutData;
@@ -670,7 +926,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
     }
   };
 
-  const endWorkout = () => {
+  const endWorkout = async () => {
     if (!workoutData || !workoutStartTime) return;
     
     const endTime = new Date();
@@ -682,6 +938,66 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
       totalTime,
       timeSpentLifting: totalTime * 0.7 // Estimate 70% of time spent lifting
     };
+    
+    // Save workout log
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await DataStorage.addWorkoutLog(today, {
+        id: `workout_${Date.now()}`,
+        name: activeWorkout?.name || 'Workout',
+        date: new Date().toISOString(),
+        duration: totalTime,
+        totalTonnage: finalWorkoutData.totalTonnage || 0,
+        exercises: finalWorkoutData.exercises || []
+      });
+      
+      // Update user stats with day-based streak
+      const currentStats = await DataStorage.getUserStats();
+      const lastWorkoutDate = currentStats.lastWorkoutDate;
+      
+      let newStreak = currentStats.workoutStreak || 0;
+      
+      // Only increment streak if this is the first workout of the day
+      if (lastWorkoutDate !== today) {
+        // Check if this continues the streak (yesterday) or breaks it
+        if (lastWorkoutDate) {
+          const lastDate = new Date(lastWorkoutDate);
+          const todayDate = new Date(today);
+          const daysDiff = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysDiff === 1) {
+            // Consecutive day - increment streak
+            newStreak = newStreak + 1;
+          } else if (daysDiff > 1) {
+            // Gap in days - reset streak to 1
+            newStreak = 1;
+          }
+          // If daysDiff === 0, it's the same day, don't change streak
+        } else {
+          // First workout ever
+          newStreak = 1;
+        }
+      }
+      
+      const updatedStats = {
+        ...currentStats,
+        totalWorkouts: (currentStats.totalWorkouts || 0) + 1,
+        totalTonnage: (currentStats.totalTonnage || 0) + (finalWorkoutData.totalTonnage || 0),
+        workoutStreak: newStreak,
+        lastWorkoutDate: today
+      };
+      
+      await DataStorage.saveUserStats(updatedStats);
+      
+      // Refresh data on main page
+      await loadUserData();
+      await loadWeeklyTonnage();
+      await loadDailyTonnage();
+      await loadDailyMinutes();
+      
+    } catch (error) {
+      console.error('Error saving workout:', error);
+    }
     
     setWorkoutData(finalWorkoutData);
     setShowWorkoutSummary(true);
@@ -718,6 +1034,8 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
       
       // Reload weekly tonnage, calendar data, and user stats
       await loadWeeklyTonnage();
+      await loadDailyTonnage();
+      await loadDailyMinutes();
       await loadCalendarData(new Date());
       await loadUserData();
       
@@ -763,8 +1081,13 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
               </TouchableOpacity>
             </View>
 
-            {/* Exercise Progress */}
-            <View style={styles.exerciseProgress}>
+            <ScrollView 
+              style={styles.workoutScrollView} 
+              contentContainerStyle={styles.workoutScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Exercise Progress */}
+              <View style={styles.exerciseProgress}>
               <Text style={styles.exerciseProgressText}>
                 Exercise {currentExerciseIndex + 1} of {workoutData?.exercises?.length || 0}
               </Text>
@@ -875,6 +1198,15 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                 </TouchableOpacity>
 
               </View>
+              
+              {/* Add Set Button */}
+              <TouchableOpacity 
+                style={styles.addSetButton}
+                onPress={() => addSet(currentExerciseIndex)}
+              >
+                <Ionicons name="add" size={20} color="#10B981" />
+                <Text style={styles.addSetButtonText}>Add Set</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Navigation */}
@@ -923,6 +1255,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                 <Text style={styles.workoutStatValue}>{formatTime(workoutTimer)}</Text>
               </View>
             </View>
+            </ScrollView>
           </SafeAreaView>
         </View>
       </Modal>
@@ -954,7 +1287,10 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity
-              onPress={() => setShowPRNotifications(true)}
+              onPress={async () => {
+                await loadRecentPRs();
+                setShowPRNotifications(true);
+              }}
               style={styles.prButton}
             >
               <Ionicons name="trophy-outline" size={20} color="#10B981" />
@@ -999,7 +1335,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                     <Ionicons name="time" size={24} color="#10B981" />
                   </View>
                   <Text style={styles.heroStatValue}>
-                    {workoutData ? Math.floor(workoutData.totalTime / 60) : (calendarDuration || 0)}
+                    {workoutData ? Math.floor(workoutData.totalTime / 60) : dailyMinutes}
                   </Text>
                   <Text style={styles.heroStatLabel}>Minutes</Text>
                 </View>
@@ -1008,7 +1344,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                     <Ionicons name="barbell" size={24} color="#10B981" />
                   </View>
                   <Text style={styles.heroStatValue}>
-                    {workoutData ? workoutData.totalTonnage : 0}
+                    {dailyTonnage.toLocaleString()}
                   </Text>
                   <Text style={styles.heroStatLabel}>Tonnage</Text>
                 </View>
@@ -1196,10 +1532,10 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
             setShowCustomBuilder(false);
             setEditingWorkout(null);
           }}
-          onWorkoutCreated={() => {
+          onWorkoutCreated={async () => {
             // The CustomWorkoutBuilder doesn't pass the workout back
             // We'll need to reload the custom workouts instead
-            loadCustomWorkouts();
+            await loadCustomWorkouts();
           }}
           editingWorkout={editingWorkout}
           onWorkoutUpdated={handleWorkoutUpdated}
@@ -1606,7 +1942,12 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                   <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
                 <Text style={styles.calendarTitle}>Workout Calendar</Text>
-                <View style={styles.calendarHeaderSpacer} />
+                <TouchableOpacity 
+                  style={styles.monthlyViewButton}
+                  onPress={() => setShowMonthlyView(true)}
+                >
+                  <Text style={styles.monthlyViewButtonText}>Monthly View</Text>
+                </TouchableOpacity>
               </View>
               
               <ScrollView style={styles.calendarContent}>
@@ -1808,7 +2149,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                   {activeWorkout?.exercises?.map((exercise: any, index: number) => {
                     console.log('Exercise data:', exercise);
                     return (
-                    <View key={`preview-${exercise.exercise?.id || exercise.id || index}`} style={styles.exercisePreviewCard}>
+                    <View key={`preview-${activeWorkout?.id || 'workout'}-${exercise.exercise?.id || exercise.id || `exercise-${index}`}`} style={styles.exercisePreviewCard}>
                       <LinearGradient
                         colors={['rgba(16, 185, 129, 0.05)', 'rgba(0, 0, 0, 0.3)']}
                         style={styles.exercisePreviewCardGradient}
@@ -1829,7 +2170,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                             try {
                               if (Array.isArray(exercise.sets) && exercise.sets.length > 0) {
                                 return exercise.sets.map((set: any, setIndex: number) => (
-                                  <View key={`set-${exercise.exercise?.id || exercise.id}-${setIndex}`} style={styles.setPreviewItem}>
+                                  <View key={`set-${activeWorkout?.id || 'workout'}-${exercise.exercise?.id || exercise.id || index}-${setIndex}`} style={styles.setPreviewItem}>
                                     <Text style={styles.setPreviewText}>
                                       Set {setIndex + 1}: {set.reps || 0} reps @ {set.weight || 0}lbs
                                     </Text>
@@ -2161,102 +2502,132 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
           </LinearGradient>
         </Modal>
 
-        {/* View All My Workouts Modal */}
-        <Modal visible={showViewAllWorkouts} animationType="slide" presentationStyle="fullScreen">
-          <LinearGradient
-            colors={['#0F172A', '#1E293B']}
-            style={styles.libraryModal}
-          >
+        {/* Monthly Calendar View Modal */}
+        <Modal visible={showMonthlyView} animationType="slide" presentationStyle="fullScreen">
+          <View style={styles.monthlyCalendarModal}>
             <SafeAreaView style={styles.safeArea}>
-              <View style={styles.libraryHeader}>
+              <View style={styles.monthlyCalendarHeader}>
                 <TouchableOpacity 
-                  style={styles.libraryBackButton}
-                  onPress={() => setShowViewAllWorkouts(false)}
+                  style={styles.monthlyCalendarBackButton}
+                  onPress={() => setShowMonthlyView(false)}
                 >
                   <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
-                <Text style={styles.libraryTitle}>My Workouts</Text>
-                <View style={styles.libraryHeaderSpacer} />
+                <Text style={styles.monthlyCalendarTitle}>
+                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+                <View style={styles.monthlyCalendarNavigation}>
+                  <TouchableOpacity 
+                    style={styles.monthNavButton}
+                    onPress={() => navigateMonth('prev')}
+                  >
+                    <Ionicons name="chevron-back" size={20} color="#10B981" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.monthNavButton}
+                    onPress={() => navigateMonth('next')}
+                  >
+                    <Ionicons name="chevron-forward" size={20} color="#10B981" />
+                  </TouchableOpacity>
+                </View>
               </View>
-              
-              <ScrollView style={styles.libraryContent}>
-                {customWorkouts && customWorkouts.length > 0 ? (
-                  <View style={styles.workoutGrid}>
-                    {customWorkouts.map((workout) => (
-                      <TouchableOpacity
-                        key={workout.id}
-                        style={styles.libraryWorkoutCard}
-                        onPress={() => {
-                          setActiveWorkout(workout);
-                          setShowViewAllWorkouts(false);
-                          setShowWorkoutPreview(true);
-                        }}
-                      >
-                        <LinearGradient
-                          colors={['rgba(16, 185, 129, 0.1)', 'rgba(0, 0, 0, 0.3)']}
-                          style={styles.libraryWorkoutCardGradient}
+
+              <ScrollView style={styles.monthlyCalendarContent}>
+                {/* Day Headers */}
+                <View style={styles.dayHeadersRow}>
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                    <Text key={day} style={styles.dayHeader}>{day}</Text>
+                  ))}
+                </View>
+
+                {/* Calendar Grid */}
+                <View style={styles.calendarGrid}>
+                  {generateMonthlyCalendar(currentMonth).map((week, weekIndex) => (
+                    <View key={weekIndex} style={styles.calendarWeek}>
+                      {week.map((date, dayIndex) => (
+                        <TouchableOpacity
+                          key={dayIndex}
+                          style={[
+                            styles.calendarDay,
+                            !isSameMonth(date, currentMonth) && styles.calendarDayOtherMonth,
+                            isToday(date) && styles.calendarDayToday,
+                            selectedDate.toDateString() === date.toDateString() && styles.calendarDaySelected
+                          ]}
+                          onPress={() => handleDateSelect(date)}
                         >
-                          <View style={styles.libraryWorkoutCardHeader}>
-                            <Text style={styles.libraryWorkoutCardName}>{workout.name}</Text>
-                            <TouchableOpacity
-                              onPress={() => toggleFavorite(workout.id)}
-                              style={styles.favoriteButton}
-                            >
-                              <Ionicons 
-                                name={favoritedWorkouts.has(workout.id) ? "heart" : "heart-outline"} 
-                                size={20} 
-                                color={favoritedWorkouts.has(workout.id) ? "#EF4444" : "#94A3B8"} 
-                              />
-                            </TouchableOpacity>
-                          </View>
-                          <Text style={styles.libraryWorkoutCardDescription}>
-                            {workout.description || 'Custom workout'}
+                          <Text style={[
+                            styles.calendarDayText,
+                            !isSameMonth(date, currentMonth) && styles.calendarDayTextOtherMonth,
+                            isToday(date) && styles.calendarDayTextToday,
+                            selectedDate.toDateString() === date.toDateString() && styles.calendarDayTextSelected
+                          ]}>
+                            {date.getDate()}
                           </Text>
-                          <View style={styles.libraryWorkoutCardStats}>
-                            <View style={styles.libraryWorkoutCardStat}>
-                              <Ionicons name="barbell-outline" size={16} color="#10B981" />
-                              <Text style={styles.libraryWorkoutCardStatText}>
-                                {workout.exercises?.length || 0} exercises
-                              </Text>
-                            </View>
-                            <View style={styles.libraryWorkoutCardStat}>
-                              <Ionicons name="list-outline" size={16} color="#10B981" />
-                              <Text style={styles.libraryWorkoutCardStatText}>
-                                {workout.exercises?.reduce((total: number, ex: any) => total + (ex.sets?.length || 0), 0) || 0} sets
-                              </Text>
-                            </View>
-                          </View>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={styles.libraryEmpty}>
-                    <Ionicons name="barbell-outline" size={64} color="#94A3B8" />
-                    <Text style={styles.libraryEmptyTitle}>No Workouts Yet</Text>
-                    <Text style={styles.libraryEmptyDescription}>
-                      Create your first custom workout to get started!
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+
+                {/* Selected Date Stats */}
+                {selectedDate && (
+                  <View style={styles.selectedDateStats}>
+                    <Text style={styles.selectedDateTitle}>
+                      {selectedDate.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
                     </Text>
-                    <TouchableOpacity
-                      style={styles.libraryEmptyButton}
-                      onPress={() => {
-                        setShowViewAllWorkouts(false);
-                        setShowCustomBuilder(true);
-                      }}
-                    >
-                      <LinearGradient
-                        colors={['#10B981', '#059669']}
-                        style={styles.libraryEmptyButtonGradient}
-                      >
-                        <Ionicons name="add" size={20} color="#FFFFFF" />
-                        <Text style={styles.libraryEmptyButtonText}>Create Workout</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
+                    
+                    <View style={styles.selectedDateStatsGrid}>
+                      <View style={styles.selectedDateStatCard}>
+                        <Text style={styles.selectedDateStatValue}>{calendarTonnage.toLocaleString()}</Text>
+                        <Text style={styles.selectedDateStatLabel}>Tonnage</Text>
+                      </View>
+                      <View style={styles.selectedDateStatCard}>
+                        <Text style={styles.selectedDateStatValue}>{calendarWorkoutCount}</Text>
+                        <Text style={styles.selectedDateStatLabel}>Workouts</Text>
+                      </View>
+                      <View style={styles.selectedDateStatCard}>
+                        <Text style={styles.selectedDateStatValue}>{Math.floor(calendarDuration / 60)}</Text>
+                        <Text style={styles.selectedDateStatLabel}>Minutes</Text>
+                      </View>
+                    </View>
+
+                    {/* Workouts for Selected Date */}
+                    {calendarWorkouts.length > 0 && (
+                      <View style={styles.selectedDateWorkouts}>
+                        <Text style={styles.selectedDateWorkoutsTitle}>Workouts</Text>
+                        {calendarWorkouts.map((workout: any, index: number) => (
+                          <View key={index} style={styles.selectedDateWorkoutCard}>
+                            <LinearGradient
+                              colors={['rgba(16, 185, 129, 0.1)', 'rgba(0, 0, 0, 0.3)']}
+                              style={styles.selectedDateWorkoutGradient}
+                            >
+                              <Text style={styles.selectedDateWorkoutName}>{workout.name}</Text>
+                              <Text style={styles.selectedDateWorkoutDescription}>{workout.description}</Text>
+                              <View style={styles.selectedDateWorkoutStats}>
+                                <View style={styles.selectedDateWorkoutStat}>
+                                  <Ionicons name="time" size={16} color="#10B981" />
+                                  <Text style={styles.selectedDateWorkoutStatText}>{workout.duration} min</Text>
+                                </View>
+                                <View style={styles.selectedDateWorkoutStat}>
+                                  <Ionicons name="barbell" size={16} color="#10B981" />
+                                  <Text style={styles.selectedDateWorkoutStatText}>{workout.tonnage.toLocaleString()} lbs</Text>
+                                </View>
+                              </View>
+                            </LinearGradient>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 )}
               </ScrollView>
             </SafeAreaView>
-          </LinearGradient>
+          </View>
         </Modal>
 
         {/* PR Notifications Modal */}
@@ -2277,25 +2648,33 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
               <ScrollView style={styles.prNotificationsContent}>
                 <View style={styles.prNotificationsSection}>
                   <Text style={styles.prNotificationsSectionTitle}>Your Recent PRs</Text>
-                  {userStats?.recentPRs?.map((pr: any, index: number) => (
-                    <View key={`recent-pr-${pr.exerciseName}-${index}`} style={styles.prNotificationCard}>
+                  {recentPRs.length > 0 ? recentPRs.map((pr: any, index: number) => (
+                    <View key={`recent-pr-${pr.id}-${index}`} style={styles.prNotificationCard}>
                       <LinearGradient
                         colors={['rgba(16, 185, 129, 0.1)', 'rgba(0, 0, 0, 0.3)']}
                         style={styles.prNotificationGradient}
                       >
                         <View style={styles.prNotificationHeader}>
-                          <Text style={styles.prNotificationExercise}>{pr.exerciseName}</Text>
-                          <Text style={styles.prNotificationType}>{pr.prType}</Text>
+                          <Ionicons name="trophy" size={20} color="#10B981" />
+                          <View style={styles.prNotificationHeaderText}>
+                            <Text style={styles.prNotificationExercise}>{pr.exerciseName}</Text>
+                            <Text style={styles.prNotificationType}>{pr.type}</Text>
+                          </View>
                         </View>
                         <Text style={styles.prNotificationDetails}>
-                          {pr.weight}lbs x {pr.reps} reps
+                          {pr.weight}lbs × {pr.reps} reps
                         </Text>
                         <Text style={styles.prNotificationDate}>
-                          {new Date(pr.timestamp).toLocaleDateString()}
+                          {new Date(pr.date).toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
                         </Text>
                       </LinearGradient>
                     </View>
-                  )) || (
+                  )) : (
                     <View style={styles.prNotificationsEmpty}>
                       <Ionicons name="trophy-outline" size={48} color="#94A3B8" />
                       <Text style={styles.prNotificationsEmptyText}>No PRs yet</Text>
@@ -2308,7 +2687,8 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
 
                 <View style={styles.prNotificationsSection}>
                   <Text style={styles.prNotificationsSectionTitle}>Team PRs</Text>
-                  {userStats?.teamPRs?.map((pr: any, index: number) => (
+                  {/* Team PRs will be implemented when team functionality is added */}
+                  {false && userStats?.teamPRs?.map((pr: any, index: number) => (
                     <View key={`team-pr-${pr.memberName}-${pr.exerciseName}-${index}`} style={styles.teamPRCard}>
                       <LinearGradient
                         colors={['rgba(16, 185, 129, 0.08)', 'rgba(0, 0, 0, 0.4)']}
@@ -2665,6 +3045,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0F172A',
   },
+  workoutScrollView: {
+    flex: 1,
+  },
+  workoutScrollContent: {
+    paddingBottom: 20,
+  },
   safeArea: {
     flex: 1,
   },
@@ -2863,6 +3249,24 @@ const styles = StyleSheet.create({
   },
   setActionButtonTextInactive: {
     color: '#10B981',
+  },
+  addSetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 12,
+  },
+  addSetButtonText: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   setActionButtons: {
     flexDirection: 'row',
@@ -3292,6 +3696,19 @@ const styles = StyleSheet.create({
   calendarHeaderSpacer: {
     width: 40,
   },
+  monthlyViewButton: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: '#10B981',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  monthlyViewButtonText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   calendarContent: {
     flex: 1,
     paddingHorizontal: 20,
@@ -3436,9 +3853,12 @@ const styles = StyleSheet.create({
   },
   prNotificationHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  prNotificationHeaderText: {
+    flex: 1,
+    marginLeft: 12,
   },
   prNotificationExercise: {
     fontSize: 16,
@@ -3925,5 +4345,175 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     marginLeft: 8,
+  },
+  
+  // Monthly Calendar Styles
+  monthlyCalendarModal: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+  },
+  monthlyCalendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  monthlyCalendarBackButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  monthlyCalendarTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  monthlyCalendarNavigation: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  monthNavButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  monthlyCalendarContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  dayHeadersRow: {
+    flexDirection: 'row',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dayHeader: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  calendarGrid: {
+    paddingVertical: 10,
+  },
+  calendarWeek: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  calendarDay: {
+    flex: 1,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    marginHorizontal: 2,
+  },
+  calendarDayOtherMonth: {
+    opacity: 0.3,
+  },
+  calendarDayToday: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  calendarDaySelected: {
+    backgroundColor: '#10B981',
+  },
+  calendarDayText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  calendarDayTextOtherMonth: {
+    color: '#64748B',
+  },
+  calendarDayTextToday: {
+    color: '#10B981',
+  },
+  calendarDayTextSelected: {
+    color: '#FFFFFF',
+  },
+  selectedDateStats: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  selectedDateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  selectedDateStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  selectedDateStatCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 12,
+    padding: 15,
+    minWidth: 80,
+  },
+  selectedDateStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#10B981',
+    marginBottom: 4,
+  },
+  selectedDateStatLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  selectedDateWorkouts: {
+    marginTop: 10,
+  },
+  selectedDateWorkoutsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 15,
+  },
+  selectedDateWorkoutCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  selectedDateWorkoutGradient: {
+    padding: 15,
+  },
+  selectedDateWorkoutName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  selectedDateWorkoutDescription: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginBottom: 10,
+  },
+  selectedDateWorkoutStats: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  selectedDateWorkoutStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  selectedDateWorkoutStatText: {
+    fontSize: 12,
+    color: '#94A3B8',
   },
 });

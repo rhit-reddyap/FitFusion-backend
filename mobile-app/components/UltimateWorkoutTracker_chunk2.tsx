@@ -9,10 +9,28 @@
       calories: 350,
       difficulty: 'Intermediate',
       exercises: [
-        { exercise: { id: '1', name: 'Bench Press', category: 'Chest', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Chest' }, sets: [{ reps: 8, weight: 135, restTime: 120, completed: false, actualReps: 8, actualWeight: 135, isActive: false }] },
-        { exercise: { id: '2', name: 'Overhead Press', category: 'Shoulders', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Shoulders' }, sets: [{ reps: 8, weight: 95, restTime: 120, completed: false, actualReps: 8, actualWeight: 95, isActive: false }] },
-        { exercise: { id: '3', name: 'Incline Dumbbell Press', category: 'Chest', difficulty: 'Intermediate', equipment: 'Dumbbells', muscle: 'Chest' }, sets: [{ reps: 10, weight: 60, restTime: 90, completed: false, actualReps: 10, actualWeight: 60, isActive: false }] },
-        { exercise: { id: '4', name: 'Dips', category: 'Triceps', difficulty: 'Intermediate', equipment: 'Bodyweight', muscle: 'Triceps' }, sets: [{ reps: 12, weight: 0, restTime: 90, completed: false, actualReps: 12, actualWeight: 0, isActive: false }] }
+        { exercise: { id: '1', name: 'Bench Press', category: 'Chest', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Chest' }, sets: [
+          { reps: 8, weight: 135, restTime: 120, completed: false, actualReps: 8, actualWeight: 135, isActive: false },
+          { reps: 8, weight: 135, restTime: 120, completed: false, actualReps: 8, actualWeight: 135, isActive: false },
+          { reps: 8, weight: 135, restTime: 120, completed: false, actualReps: 8, actualWeight: 135, isActive: false },
+          { reps: 8, weight: 135, restTime: 120, completed: false, actualReps: 8, actualWeight: 135, isActive: false }
+        ] },
+        { exercise: { id: '2', name: 'Overhead Press', category: 'Shoulders', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Shoulders' }, sets: [
+          { reps: 8, weight: 95, restTime: 120, completed: false, actualReps: 8, actualWeight: 95, isActive: false },
+          { reps: 8, weight: 95, restTime: 120, completed: false, actualReps: 8, actualWeight: 95, isActive: false },
+          { reps: 8, weight: 95, restTime: 120, completed: false, actualReps: 8, actualWeight: 95, isActive: false },
+          { reps: 8, weight: 95, restTime: 120, completed: false, actualReps: 8, actualWeight: 95, isActive: false }
+        ] },
+        { exercise: { id: '3', name: 'Incline Dumbbell Press', category: 'Chest', difficulty: 'Intermediate', equipment: 'Dumbbells', muscle: 'Chest' }, sets: [
+          { reps: 10, weight: 60, restTime: 90, completed: false, actualReps: 10, actualWeight: 60, isActive: false },
+          { reps: 10, weight: 60, restTime: 90, completed: false, actualReps: 10, actualWeight: 60, isActive: false },
+          { reps: 10, weight: 60, restTime: 90, completed: false, actualReps: 10, actualWeight: 60, isActive: false }
+        ] },
+        { exercise: { id: '4', name: 'Dips', category: 'Triceps', difficulty: 'Intermediate', equipment: 'Bodyweight', muscle: 'Triceps' }, sets: [
+          { reps: 12, weight: 0, restTime: 90, completed: false, actualReps: 12, actualWeight: 0, isActive: false },
+          { reps: 12, weight: 0, restTime: 90, completed: false, actualReps: 12, actualWeight: 0, isActive: false },
+          { reps: 12, weight: 0, restTime: 90, completed: false, actualReps: 12, actualWeight: 0, isActive: false }
+        ] }
       ]
     },
     {
@@ -24,10 +42,28 @@
       calories: 380,
       difficulty: 'Intermediate',
       exercises: [
-        { exercise: { id: '5', name: 'Pull-ups', category: 'Back', difficulty: 'Intermediate', equipment: 'Bodyweight', muscle: 'Back' }, sets: [{ reps: 8, weight: 0, restTime: 120, completed: false, actualReps: 8, actualWeight: 0, isActive: false }] },
-        { exercise: { id: '6', name: 'Barbell Rows', category: 'Back', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Back' }, sets: [{ reps: 8, weight: 115, restTime: 120, completed: false, actualReps: 8, actualWeight: 115, isActive: false }] },
-        { exercise: { id: '7', name: 'Lat Pulldowns', category: 'Back', difficulty: 'Beginner', equipment: 'Cable', muscle: 'Back' }, sets: [{ reps: 10, weight: 100, restTime: 90, completed: false, actualReps: 10, actualWeight: 100, isActive: false }] },
-        { exercise: { id: '8', name: 'Barbell Curls', category: 'Biceps', difficulty: 'Beginner', equipment: 'Barbell', muscle: 'Biceps' }, sets: [{ reps: 12, weight: 65, restTime: 90, completed: false, actualReps: 12, actualWeight: 65, isActive: false }] }
+        { exercise: { id: '5', name: 'Pull-ups', category: 'Back', difficulty: 'Intermediate', equipment: 'Bodyweight', muscle: 'Back' }, sets: [
+          { reps: 8, weight: 0, restTime: 120, completed: false, actualReps: 8, actualWeight: 0, isActive: false },
+          { reps: 8, weight: 0, restTime: 120, completed: false, actualReps: 8, actualWeight: 0, isActive: false },
+          { reps: 8, weight: 0, restTime: 120, completed: false, actualReps: 8, actualWeight: 0, isActive: false },
+          { reps: 8, weight: 0, restTime: 120, completed: false, actualReps: 8, actualWeight: 0, isActive: false }
+        ] },
+        { exercise: { id: '6', name: 'Barbell Rows', category: 'Back', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Back' }, sets: [
+          { reps: 8, weight: 115, restTime: 120, completed: false, actualReps: 8, actualWeight: 115, isActive: false },
+          { reps: 8, weight: 115, restTime: 120, completed: false, actualReps: 8, actualWeight: 115, isActive: false },
+          { reps: 8, weight: 115, restTime: 120, completed: false, actualReps: 8, actualWeight: 115, isActive: false },
+          { reps: 8, weight: 115, restTime: 120, completed: false, actualReps: 8, actualWeight: 115, isActive: false }
+        ] },
+        { exercise: { id: '7', name: 'Lat Pulldowns', category: 'Back', difficulty: 'Beginner', equipment: 'Cable', muscle: 'Back' }, sets: [
+          { reps: 10, weight: 100, restTime: 90, completed: false, actualReps: 10, actualWeight: 100, isActive: false },
+          { reps: 10, weight: 100, restTime: 90, completed: false, actualReps: 10, actualWeight: 100, isActive: false },
+          { reps: 10, weight: 100, restTime: 90, completed: false, actualReps: 10, actualWeight: 100, isActive: false }
+        ] },
+        { exercise: { id: '8', name: 'Barbell Curls', category: 'Biceps', difficulty: 'Beginner', equipment: 'Barbell', muscle: 'Biceps' }, sets: [
+          { reps: 12, weight: 65, restTime: 90, completed: false, actualReps: 12, actualWeight: 65, isActive: false },
+          { reps: 12, weight: 65, restTime: 90, completed: false, actualReps: 12, actualWeight: 65, isActive: false },
+          { reps: 12, weight: 65, restTime: 90, completed: false, actualReps: 12, actualWeight: 65, isActive: false }
+        ] }
       ]
     },
     {
@@ -39,10 +75,28 @@
       calories: 420,
       difficulty: 'Intermediate',
       exercises: [
-        { exercise: { id: '9', name: 'Squats', category: 'Legs', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Quadriceps' }, sets: [{ reps: 8, weight: 185, restTime: 180, completed: false, actualReps: 8, actualWeight: 185, isActive: false }] },
-        { exercise: { id: '10', name: 'Romanian Deadlifts', category: 'Legs', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Hamstrings' }, sets: [{ reps: 8, weight: 155, restTime: 150, completed: false, actualReps: 8, actualWeight: 155, isActive: false }] },
-        { exercise: { id: '11', name: 'Bulgarian Split Squats', category: 'Legs', difficulty: 'Intermediate', equipment: 'Dumbbells', muscle: 'Quadriceps' }, sets: [{ reps: 10, weight: 40, restTime: 90, completed: false, actualReps: 10, actualWeight: 40, isActive: false }] },
-        { exercise: { id: '12', name: 'Calf Raises', category: 'Legs', difficulty: 'Beginner', equipment: 'Bodyweight', muscle: 'Calves' }, sets: [{ reps: 15, weight: 0, restTime: 60, completed: false, actualReps: 15, actualWeight: 0, isActive: false }] }
+        { exercise: { id: '9', name: 'Squats', category: 'Legs', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Quadriceps' }, sets: [
+          { reps: 8, weight: 185, restTime: 180, completed: false, actualReps: 8, actualWeight: 185, isActive: false },
+          { reps: 8, weight: 185, restTime: 180, completed: false, actualReps: 8, actualWeight: 185, isActive: false },
+          { reps: 8, weight: 185, restTime: 180, completed: false, actualReps: 8, actualWeight: 185, isActive: false },
+          { reps: 8, weight: 185, restTime: 180, completed: false, actualReps: 8, actualWeight: 185, isActive: false }
+        ] },
+        { exercise: { id: '10', name: 'Romanian Deadlifts', category: 'Legs', difficulty: 'Intermediate', equipment: 'Barbell', muscle: 'Hamstrings' }, sets: [
+          { reps: 8, weight: 155, restTime: 150, completed: false, actualReps: 8, actualWeight: 155, isActive: false },
+          { reps: 8, weight: 155, restTime: 150, completed: false, actualReps: 8, actualWeight: 155, isActive: false },
+          { reps: 8, weight: 155, restTime: 150, completed: false, actualReps: 8, actualWeight: 155, isActive: false },
+          { reps: 8, weight: 155, restTime: 150, completed: false, actualReps: 8, actualWeight: 155, isActive: false }
+        ] },
+        { exercise: { id: '11', name: 'Bulgarian Split Squats', category: 'Legs', difficulty: 'Intermediate', equipment: 'Dumbbells', muscle: 'Quadriceps' }, sets: [
+          { reps: 10, weight: 40, restTime: 90, completed: false, actualReps: 10, actualWeight: 40, isActive: false },
+          { reps: 10, weight: 40, restTime: 90, completed: false, actualReps: 10, actualWeight: 40, isActive: false },
+          { reps: 10, weight: 40, restTime: 90, completed: false, actualReps: 10, actualWeight: 40, isActive: false }
+        ] },
+        { exercise: { id: '12', name: 'Calf Raises', category: 'Legs', difficulty: 'Beginner', equipment: 'Bodyweight', muscle: 'Calves' }, sets: [
+          { reps: 15, weight: 0, restTime: 60, completed: false, actualReps: 15, actualWeight: 0, isActive: false },
+          { reps: 15, weight: 0, restTime: 60, completed: false, actualReps: 15, actualWeight: 0, isActive: false },
+          { reps: 15, weight: 0, restTime: 60, completed: false, actualReps: 15, actualWeight: 0, isActive: false }
+        ] }
       ]
     },
     {
@@ -201,68 +255,68 @@
     return exercises;
   };
 
-  // Predefined exercise videos (60 total)
+  // Predefined exercise videos (60 total) - Updated with verified working YouTube links
   const exerciseVideos = [
     { id: '1', name: 'Push-ups', category: 'Chest', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=IODxDxX7oi4' },
-    { id: '2', name: 'Squats', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=YaXPRqUwItQ' },
+    { id: '2', name: 'Squats', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=aclHkVaku9U' },
     { id: '3', name: 'Pull-ups', category: 'Back', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=eGo4IYlbE5g' },
     { id: '4', name: 'Deadlifts', category: 'Back', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=op9kVnSso6Q' },
     { id: '5', name: 'Bench Press', category: 'Chest', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=rT7DgCr-3pg' },
-    { id: '6', name: 'Overhead Press', category: 'Shoulders', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=QAJK64eMqB0' },
+    { id: '6', name: 'Overhead Press', category: 'Shoulders', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=2yjwXTZQDDI' },
     { id: '7', name: 'Lunges', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=3XDriUn0udo' },
     { id: '8', name: 'Planks', category: 'Core', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=pSHjTRCQxIw' },
     { id: '9', name: 'Bicep Curls', category: 'Arms', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=ykJmrZ5v0Oo' },
     { id: '10', name: 'Tricep Dips', category: 'Arms', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=6kALZikBxLc' },
-    { id: '11', name: 'Incline Bench Press', category: 'Chest', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=8iPEnov-lmU' },
+    { id: '11', name: 'Incline Bench Press', category: 'Chest', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=DbFgADa2PL8' },
     { id: '12', name: 'Romanian Deadlifts', category: 'Legs', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=ytGaGIn3SjE' },
     { id: '13', name: 'Lat Pulldowns', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=CAwf7n6Lu78' },
-    { id: '14', name: 'Shoulder Press', category: 'Shoulders', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=QAJK64eMqB0' },
+    { id: '14', name: 'Shoulder Press', category: 'Shoulders', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=qEwKCR5JCog' },
     { id: '15', name: 'Leg Press', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ' },
     { id: '16', name: 'Chest Flyes', category: 'Chest', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=eozdVDA78K0' },
     { id: '17', name: 'Bent Over Rows', category: 'Back', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=paCfxQrQxU8' },
-    { id: '18', name: 'Lateral Raises', category: 'Shoulders', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=3VcKXH1u3kM' },
+    { id: '18', name: 'Lateral Raises', category: 'Shoulders', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=3VcKaLbBcTs' },
     { id: '19', name: 'Hammer Curls', category: 'Arms', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=TwD-YGVP4Bk' },
     { id: '20', name: 'Close Grip Bench Press', category: 'Arms', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=nEF0bv2FW94' },
     { id: '21', name: 'Bulgarian Split Squats', category: 'Legs', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=2C-uNgKwPLE' },
     { id: '22', name: 'Cable Rows', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=GZbfZ033f74' },
-    { id: '23', name: 'Incline Dumbbell Press', category: 'Chest', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=8iPEnov-lmU' },
+    { id: '23', name: 'Incline Dumbbell Press', category: 'Chest', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=hCoLQiSkTlc' },
     { id: '24', name: 'Front Squats', category: 'Legs', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=uYumuLmkVz8' },
     { id: '25', name: 'Face Pulls', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=rep-qVOkqgk' },
     { id: '26', name: 'Dumbbell Rows', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=roCP6wCXPqo' },
-    { id: '27', name: 'Hip Thrusts', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=uYumuLmkVz8' },
+    { id: '27', name: 'Hip Thrusts', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=SEdqd1n0cvg' },
     { id: '28', name: 'Arnold Press', category: 'Shoulders', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=6Z15_WdXmVw' },
-    { id: '29', name: 'Calf Raises', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=3VcKXH1u3kM' },
+    { id: '29', name: 'Calf Raises', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=gwLzBJYoWlI' },
     { id: '30', name: 'Russian Twists', category: 'Core', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=wkD8rjkodUI' },
     { id: '31', name: 'Mountain Climbers', category: 'Core', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=nmwgirgXLYM' },
     { id: '32', name: 'Burpees', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=TU8QYVW0gDU' },
-    { id: '33', name: 'Jump Squats', category: 'Legs', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=UYt5IF5bHjE' },
+    { id: '33', name: 'Jump Squats', category: 'Legs', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=A-cFYWvaHr0' },
     { id: '34', name: 'Diamond Push-ups', category: 'Chest', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=jaxbEHLC4qU' },
     { id: '35', name: 'Chin-ups', category: 'Back', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=brhRXlOeR4s' },
-    { id: '36', name: 'Pike Push-ups', category: 'Shoulders', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=3VcKXH1u3kM' },
+    { id: '36', name: 'Pike Push-ups', category: 'Shoulders', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=x4YNi4IVZEI' },
     { id: '37', name: 'Single Leg Deadlifts', category: 'Legs', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=Q4gMV4uXzxQ' },
     { id: '38', name: 'Inverted Rows', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=FXo0iD4kIhI' },
     { id: '39', name: 'Decline Push-ups', category: 'Chest', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=SKPab2YC8BE' },
     { id: '40', name: 'Wall Sits', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=YQVlZo6tcvA' },
     { id: '41', name: 'Superman', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=ccMXLH6lcWU' },
     { id: '42', name: 'Side Planks', category: 'Core', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=K2VljzCC16g' },
-    { id: '43', name: 'Hindu Push-ups', category: 'Chest', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=4f3Oy5Jnj44' },
+    { id: '43', name: 'Hindu Push-ups', category: 'Chest', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=Gp4uGkz6WeY' },
     { id: '44', name: 'Glute Bridges', category: 'Legs', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=wPM8icPu6H8' },
-    { id: '45', name: 'Reverse Flyes', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=paCfxQrQxU8' },
-    { id: '46', name: 'Pistol Squats', category: 'Legs', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=YaXPRqUwItQ' },
-    { id: '47', name: 'Handstand Push-ups', category: 'Shoulders', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=3VcKXH1u3kM' },
+    { id: '45', name: 'Reverse Flyes', category: 'Back', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=S-VRD6A1uNM' },
+    { id: '46', name: 'Pistol Squats', category: 'Legs', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=vq5-vdgJc0I' },
+    { id: '47', name: 'Handstand Push-ups', category: 'Shoulders', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=tQhrk6WMcKw' },
     { id: '48', name: 'L-sits', category: 'Core', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=Wx3gVTHHdBY' },
-    { id: '49', name: 'Muscle-ups', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=4f3Oy5Jnj44' },
+    { id: '49', name: 'Muscle-ups', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=16a52pUXkOg' },
     { id: '50', name: 'Turkish Get-ups', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=0bWRPC49-KI' },
     { id: '51', name: 'Kettlebell Swings', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=YSxHifyI6s8' },
-    { id: '52', name: 'Box Jumps', category: 'Legs', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=UYt5IF5bHjE' },
-    { id: '53', name: 'Battle Ropes', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=UYt5IF5bHjE' },
+    { id: '52', name: 'Box Jumps', category: 'Legs', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=hxldG9FX4j4' },
+    { id: '53', name: 'Battle Ropes', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=w8ZdJ2JaP0s' },
     { id: '54', name: 'Farmer\'s Walk', category: 'Full Body', difficulty: 'Beginner', videoUrl: 'https://www.youtube.com/watch?v=Fkzk_RqlYig' },
-    { id: '55', name: 'Sled Push', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=UYt5IF5bHjE' },
-    { id: '56', name: 'Rope Climbing', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=4f3Oy5Jnj44' },
-    { id: '57', name: 'Tire Flips', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=UYt5IF5bHjE' },
-    { id: '58', name: 'Sandbag Carries', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=Fkzk_RqlYig' },
-    { id: '59', name: 'Sledgehammer Swings', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=UYt5IF5bHjE' },
-    { id: '60', name: 'Atlas Stone Lifts', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=UYt5IF5bHjE' }
+    { id: '55', name: 'Sled Push', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=kiHaHkq2C2E' },
+    { id: '56', name: 'Rope Climbing', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=rHiSsgFa5OI' },
+    { id: '57', name: 'Tire Flips', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=RFHrJ_V7NoE' },
+    { id: '58', name: 'Sandbag Carries', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=P8VWhqdr7ak' },
+    { id: '59', name: 'Sledgehammer Swings', category: 'Full Body', difficulty: 'Intermediate', videoUrl: 'https://www.youtube.com/watch?v=QoPcQdCiEn4' },
+    { id: '60', name: 'Atlas Stone Lifts', category: 'Full Body', difficulty: 'Advanced', videoUrl: 'https://www.youtube.com/watch?v=ptDBgsQr7rI' }
   ];
 
   // Organize workouts by category

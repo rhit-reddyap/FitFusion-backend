@@ -14,7 +14,9 @@ const STORAGE_KEYS = {
   USER_RECIPES: 'user_recipes',
   USER_PERSONAL_INFO: 'user_personal_info',
   CALORIE_TARGET: 'calorie_target',
-  BODY_COMPOSITION_LOGS: 'body_composition_logs'
+  BODY_COMPOSITION_LOGS: 'body_composition_logs',
+  PERSONAL_RECORDS: 'personal_records',
+  USER_TEAMS: 'user_teams'
 };
 
 // Default user stats - all start at 0
@@ -872,6 +874,46 @@ export class DataStorage {
       await AsyncStorage.setItem(STORAGE_KEYS.BODY_COMPOSITION_LOGS, JSON.stringify(logs));
     } catch (error) {
       console.error('Error adding body composition log:', error);
+    }
+  }
+
+  // Personal Records methods
+  static async getPersonalRecords(): Promise<any> {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.PERSONAL_RECORDS);
+      return data ? JSON.parse(data) : {};
+    } catch (error) {
+      console.error('Error getting personal records:', error);
+      return {};
+    }
+  }
+
+  static async savePersonalRecord(exerciseKey: string, record: any): Promise<void> {
+    try {
+      const records = await this.getPersonalRecords();
+      records[exerciseKey] = record;
+      await AsyncStorage.setItem(STORAGE_KEYS.PERSONAL_RECORDS, JSON.stringify(records));
+    } catch (error) {
+      console.error('Error saving personal record:', error);
+    }
+  }
+
+  // User Teams methods
+  static async getUserTeams(): Promise<any[]> {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_TEAMS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting user teams:', error);
+      return [];
+    }
+  }
+
+  static async saveUserTeams(teams: any[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_TEAMS, JSON.stringify(teams));
+    } catch (error) {
+      console.error('Error saving user teams:', error);
     }
   }
 

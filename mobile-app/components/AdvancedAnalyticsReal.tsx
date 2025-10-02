@@ -48,6 +48,14 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
   const loadWeightLogs = async () => {
     try {
       const logs = await DataStorage.getBodyCompositionLogs();
+      console.log('=== WEIGHT LOGS DEBUG ===');
+      console.log('Total logs loaded:', logs.length);
+      console.log('All logs:', logs);
+      
+      // Filter and show only weight entries
+      const weightEntries = logs.filter(log => log.weight && log.weight > 0);
+      console.log('Weight entries:', weightEntries);
+      
       setWeightLogs(logs);
     } catch (error) {
       console.error('Error loading weight logs:', error);
@@ -170,49 +178,84 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
   };
 
   const getWeeklyWeightData = () => {
+    console.log('=== WEEKLY DATA DEBUG ===');
+    console.log('Current weightLogs:', weightLogs);
+    
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
     startOfWeek.setHours(0, 0, 0, 0);
+    
+    console.log('Start of week (Sunday):', startOfWeek);
     
     const days = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
       
+      // Find the closest weight log for this day (within 24 hours)
       const dayLog = weightLogs.find(log => {
         const logDate = new Date(log.date);
-        return logDate.toDateString() === day.toDateString();
+        const dayStart = new Date(day);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(day);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        const isMatch = logDate >= dayStart && logDate <= dayEnd;
+        if (isMatch) {
+          console.log(`Found match for ${day.toLocaleDateString()}:`, log);
+        }
+        
+        return isMatch;
       });
       
-      days.push({
+      const dayData = {
         date: day,
         label: day.toLocaleDateString('en-US', { weekday: 'short' }),
         weight: dayLog ? dayLog.weight : null
-      });
+      };
+      
+      console.log(`Day ${i} (${dayData.label}):`, dayData);
+      days.push(dayData);
     }
+    
+    console.log('Final weekly data days:', days);
     return days;
   };
 
   // Helper function to calculate dynamic Y-axis range for weight data
   const getWeightRange = (data: any[]) => {
-    const weights = data.map(d => d.weight).filter(w => w !== null);
-    if (weights.length === 0) return { min: 140, max: 160, range: 20 };
+    console.log('=== RANGE CALCULATION DEBUG ===');
+    console.log('Input data for range calculation:', data);
+    
+    const weights = data.map(d => d.weight).filter(w => w !== null && w > 0);
+    console.log('Filtered weights:', weights);
+    
+    if (weights.length === 0) {
+      console.log('No weights found, using default range');
+      return { min: 140, max: 160, range: 20 };
+    }
     
     const min = Math.min(...weights);
     const max = Math.max(...weights);
     const range = max - min;
     
-    // Add padding (10% on each side) and ensure minimum range
-    const padding = Math.max(range * 0.1, 5);
-    const minWithPadding = Math.max(min - padding, min - 10);
+    console.log('Raw min/max:', { min, max, range });
+    
+    // Add padding (25% on each side) and ensure minimum range
+    const padding = Math.max(range * 0.25, 20);
+    const minWithPadding = min - padding;
     const maxWithPadding = max + padding;
     
-    return {
+    const result = {
       min: Math.round(minWithPadding),
       max: Math.round(maxWithPadding),
       range: maxWithPadding - minWithPadding
     };
+    
+    console.log('Final calculated range:', result);
+    console.log('Padding used:', padding);
+    return result;
   };
 
   const getMonthlyWeightData = () => {
@@ -229,6 +272,7 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
       
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
       
       const weekLogs = weightLogs.filter(log => {
         const logDate = new Date(log.date);
@@ -834,66 +878,88 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
             
             {weightGraphTimeframe === 'week' ? (() => {
               const weeklyData = getWeeklyWeightData();
-              const weightRange = getWeightRange(weeklyData);
+              const weightsWithData = weeklyData.filter(d => d.weight !== null);
+              
+              if (weightsWithData.length === 0) {
+                return (
+                  <View style={styles.graphContainer}>
+                    <View style={styles.emptyGraphContainer}>
+                      <Text style={styles.emptyGraphText}>No weight data for this week</Text>
+                      <Text style={styles.emptyGraphSubtext}>Log your weight to see progress</Text>
+                    </View>
+                  </View>
+                );
+              }
+              
+              // Fixed range for better scaling
+              const weights = weightsWithData.map(d => d.weight);
+              const minWeight = Math.min(...weights);
+              const maxWeight = Math.max(...weights);
+              
+              // Use fixed range around the data
+              const range = Math.max(maxWeight - minWeight, 20); // Minimum 20 lb range
+              const center = (minWeight + maxWeight) / 2;
+              const fixedMin = center - range / 2;
+              const fixedMax = center + range / 2;
+              
+              console.log('FIXED RANGE:', { minWeight, maxWeight, fixedMin, fixedMax, range });
               
               return (
                 <View style={styles.graphContainer}>
                   <View style={styles.yAxis}>
                     <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
                     <View style={styles.yAxisValues}>
-                      <Text style={styles.yAxisValue}>{weightRange.max}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.75))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.5))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.25))}</Text>
-                      <Text style={styles.yAxisValue}>{weightRange.min}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(fixedMax)}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(fixedMin + (range * 0.75))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(fixedMin + (range * 0.5))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(fixedMin + (range * 0.25))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(fixedMin)}</Text>
                     </View>
                   </View>
                   <View style={styles.graphArea}>
-                    <View style={styles.lineGraphContainer}>
+                    <View style={styles.basicGraphContainer}>
                       {weeklyData.map((day, index) => {
-                        const nextDay = weeklyData[index + 1];
-                        const hasData = day.weight !== null;
-                        const hasNextData = nextDay && nextDay.weight !== null;
+                        if (!day.weight) return null;
                         
-                        if (!hasData) return null;
+                        // Basic positioning - no complex calculations
+                        const x = 10 + (index * 12); // Spread evenly across 7 days (10% + index * 12% = 10%, 22%, 34%, 46%, 58%, 70%, 82%)
+                        const yPercent = ((day.weight - fixedMin) / range) * 80; // Use 80% of height
+                        const y = 90 - yPercent; // Invert Y: 90% - calculated position (10% bottom margin)
                         
-                        const yPosition = ((weightRange.max - day.weight) / weightRange.range) * 100;
-                        const nextYPosition = hasNextData ? ((weightRange.max - nextDay.weight) / weightRange.range) * 100 : null;
-                      
-                      return (
-                        <View key={index} style={styles.lineGraphPoint}>
-                          <View 
-                            style={[
-                              styles.lineGraphDot,
-                              { 
-                                left: `${(index / 6) * 100}%`,
-                                top: `${yPosition}%`
-                              }
-                            ]} 
-                          />
-                          {hasNextData && (
+                        console.log(`${day.label}: ${day.weight}lbs`);
+                        console.log(`  Range: ${fixedMin} to ${fixedMax} (${range})`);
+                        console.log(`  yPercent: ((${day.weight} - ${fixedMin}) / ${range}) * 80 = ${yPercent}%`);
+                        console.log(`  Final Y: 90 - ${yPercent} = ${y}%`);
+                        console.log(`  Position: (${x}%, ${y}%)`);
+                        
+                        return (
+                          <View key={index}>
                             <View 
                               style={[
-                                styles.lineGraphLine,
-                                {
-                                  left: `${(index / 6) * 100}%`,
-                                  top: `${yPosition}%`,
-                                  width: `${100 / 6}%`,
-                                  transform: [{ rotate: `${Math.atan2(nextYPosition - yPosition, 100/6)}rad` }]
+                                styles.basicGraphDot,
+                                { 
+                                  left: `${x}%`,
+                                  top: `${y}%`,
+                                  position: 'absolute'
                                 }
                               ]} 
                             />
-                          )}
-                          <Text style={[styles.lineGraphValue, { left: `${(index / 6) * 100}%`, top: `${yPosition - 20}%` }]}>
-                            {day.weight.toFixed(1)}
-                          </Text>
-                        </View>
-                      );
-                    })}
+                            <Text style={[styles.basicGraphLabel, { 
+                              left: `${x}%`, 
+                              top: `${y - 10}%`,
+                              position: 'absolute'
+                            }]}>
+                              {day.weight.toFixed(1)}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                     <View style={styles.xAxis}>
                       {weeklyData.map((day, index) => (
-                        <Text key={index} style={styles.xAxisLabel}>{day.label}</Text>
+                        <Text key={index} style={styles.xAxisLabel}>
+                          {day.label}
+                        </Text>
                       ))}
                     </View>
                   </View>
@@ -901,62 +967,68 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
               );
             })() : (() => {
               const monthlyData = getMonthlyWeightData();
-              const weightRange = getWeightRange(monthlyData);
+              const weightsWithData = monthlyData.filter(d => d.weight !== null);
+              
+              if (weightsWithData.length === 0) {
+                return (
+                  <View style={styles.graphContainer}>
+                    <View style={styles.emptyGraphContainer}>
+                      <Text style={styles.emptyGraphText}>No weight data for this month</Text>
+                      <Text style={styles.emptyGraphSubtext}>Log your weight to see progress</Text>
+                    </View>
+                  </View>
+                );
+              }
+              
+              // Simple range calculation for monthly
+              const weights = weightsWithData.map(d => d.weight);
+              const minWeight = Math.min(...weights);
+              const maxWeight = Math.max(...weights);
+              const weightRange = maxWeight - minWeight;
+              const padding = Math.max(weightRange * 0.2, 10);
+              const graphMin = minWeight - padding;
+              const graphMax = maxWeight + padding;
+              const graphRange = graphMax - graphMin;
               
               return (
                 <View style={styles.graphContainer}>
                   <View style={styles.yAxis}>
                     <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
                     <View style={styles.yAxisValues}>
-                      <Text style={styles.yAxisValue}>{weightRange.max}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.75))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.5))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.25))}</Text>
-                      <Text style={styles.yAxisValue}>{weightRange.min}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(graphMax)}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(graphMin + (graphRange * 0.75))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(graphMin + (graphRange * 0.5))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(graphMin + (graphRange * 0.25))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(graphMin)}</Text>
                     </View>
                   </View>
                   <View style={styles.graphArea}>
-                    <View style={styles.lineGraphContainer}>
+                    <View style={styles.simpleGraphContainer}>
                       {monthlyData.map((week, index) => {
-                        const nextWeek = monthlyData[index + 1];
-                        const hasData = week.weight !== null;
-                        const hasNextData = nextWeek && nextWeek.weight !== null;
+                        if (!week.weight) return null;
                         
-                        if (!hasData) return null;
+                        // Simple positioning for monthly
+                        const totalWeeks = monthlyData.length;
+                        const xPos = totalWeeks > 1 ? (index / (totalWeeks - 1)) * 100 : 50;
+                        const yPos = 100 - ((week.weight - graphMin) / graphRange) * 100;
                         
-                        const yPosition = ((weightRange.max - week.weight) / weightRange.range) * 100;
-                        const nextYPosition = hasNextData ? ((weightRange.max - nextWeek.weight) / weightRange.range) * 100 : null;
-                      
-                      return (
-                        <View key={index} style={styles.lineGraphPoint}>
-                          <View 
-                            style={[
-                              styles.lineGraphDot,
-                              { 
-                                left: `${(index / 4) * 100}%`,
-                                top: `${yPosition}%`
-                              }
-                            ]} 
-                          />
-                          {hasNextData && (
+                        return (
+                          <View key={index} style={styles.simpleGraphPoint}>
                             <View 
                               style={[
-                                styles.lineGraphLine,
-                                {
-                                  left: `${(index / 4) * 100}%`,
-                                  top: `${yPosition}%`,
-                                  width: `${100 / 4}%`,
-                                  transform: [{ rotate: `${Math.atan2(nextYPosition - yPosition, 100/4)}rad` }]
+                                styles.simpleGraphDot,
+                                { 
+                                  left: `${xPos}%`,
+                                  top: `${yPos}%`
                                 }
                               ]} 
                             />
-                          )}
-                          <Text style={[styles.lineGraphValue, { left: `${(index / 4) * 100}%`, top: `${yPosition - 20}%` }]}>
-                            {week.weight.toFixed(1)}
-                          </Text>
-                        </View>
-                      );
-                    })}
+                            <Text style={[styles.simpleGraphLabel, { left: `${xPos}%`, top: `${yPos - 25}%` }]}>
+                              {week.weight.toFixed(1)}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                     <View style={styles.xAxis}>
                       {monthlyData.map((week, index) => (
@@ -1886,17 +1958,24 @@ const styles = StyleSheet.create({
   },
   lineGraphPoint: {
     position: 'absolute',
-    width: 1,
-    height: 1,
+    width: 20,
+    height: 20,
   },
   lineGraphDot: {
     position: 'absolute',
-    width: 8,
-    height: 8,
+    width: 12,
+    height: 12,
     backgroundColor: '#10B981',
-    borderRadius: 4,
-    marginLeft: -4,
-    marginTop: -4,
+    borderRadius: 6,
+    marginLeft: -6,
+    marginTop: -6,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5,
   },
   lineGraphLine: {
     position: 'absolute',
@@ -1912,6 +1991,120 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: -15,
     width: 30,
+  },
+  debugGridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    zIndex: 0,
+  },
+  debugGridLineVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    zIndex: 0,
+  },
+  simpleGraphContainer: {
+    position: 'relative',
+    height: 200,
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+  },
+  simpleGraphPoint: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+  },
+  simpleGraphDot: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    backgroundColor: '#10B981',
+    borderRadius: 8,
+    marginLeft: -8,
+    marginTop: -8,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  simpleGraphLabel: {
+    position: 'absolute',
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textAlign: 'center',
+    width: 40,
+    marginLeft: -20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  emptyGraphContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyGraphText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptyGraphSubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  debugLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 2,
+    zIndex: 1,
+  },
+  basicGraphContainer: {
+    position: 'relative',
+    height: 200,
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  basicGraphDot: {
+    width: 14,
+    height: 14,
+    backgroundColor: '#10B981',
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  basicGraphLabel: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textAlign: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    minWidth: 35,
   },
 });
 
