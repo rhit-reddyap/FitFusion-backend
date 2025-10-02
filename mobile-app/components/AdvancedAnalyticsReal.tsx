@@ -194,6 +194,27 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
     return days;
   };
 
+  // Helper function to calculate dynamic Y-axis range for weight data
+  const getWeightRange = (data: any[]) => {
+    const weights = data.map(d => d.weight).filter(w => w !== null);
+    if (weights.length === 0) return { min: 140, max: 160, range: 20 };
+    
+    const min = Math.min(...weights);
+    const max = Math.max(...weights);
+    const range = max - min;
+    
+    // Add padding (10% on each side) and ensure minimum range
+    const padding = Math.max(range * 0.1, 5);
+    const minWithPadding = Math.max(min - padding, min - 10);
+    const maxWithPadding = max + padding;
+    
+    return {
+      min: Math.round(minWithPadding),
+      max: Math.round(maxWithPadding),
+      range: maxWithPadding - minWithPadding
+    };
+  };
+
   const getMonthlyWeightData = () => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -811,28 +832,33 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
               </View>
             </View>
             
-            {weightGraphTimeframe === 'week' ? (
-              <View style={styles.graphContainer}>
-                <View style={styles.yAxis}>
-                  <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
-                  <View style={styles.yAxisValues}>
-                    <Text style={styles.yAxisValue}>250</Text>
-                    <Text style={styles.yAxisValue}>200</Text>
-                    <Text style={styles.yAxisValue}>150</Text>
-                    <Text style={styles.yAxisValue}>100</Text>
+            {weightGraphTimeframe === 'week' ? (() => {
+              const weeklyData = getWeeklyWeightData();
+              const weightRange = getWeightRange(weeklyData);
+              
+              return (
+                <View style={styles.graphContainer}>
+                  <View style={styles.yAxis}>
+                    <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
+                    <View style={styles.yAxisValues}>
+                      <Text style={styles.yAxisValue}>{weightRange.max}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.75))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.5))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.25))}</Text>
+                      <Text style={styles.yAxisValue}>{weightRange.min}</Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.graphArea}>
-                  <View style={styles.lineGraphContainer}>
-                    {getWeeklyWeightData().map((day, index) => {
-                      const nextDay = getWeeklyWeightData()[index + 1];
-                      const hasData = day.weight !== null;
-                      const hasNextData = nextDay && nextDay.weight !== null;
-                      
-                      if (!hasData) return null;
-                      
-                      const yPosition = ((250 - day.weight) / 150) * 100;
-                      const nextYPosition = hasNextData ? ((250 - nextDay.weight) / 150) * 100 : null;
+                  <View style={styles.graphArea}>
+                    <View style={styles.lineGraphContainer}>
+                      {weeklyData.map((day, index) => {
+                        const nextDay = weeklyData[index + 1];
+                        const hasData = day.weight !== null;
+                        const hasNextData = nextDay && nextDay.weight !== null;
+                        
+                        if (!hasData) return null;
+                        
+                        const yPosition = ((weightRange.max - day.weight) / weightRange.range) * 100;
+                        const nextYPosition = hasNextData ? ((weightRange.max - nextDay.weight) / weightRange.range) * 100 : null;
                       
                       return (
                         <View key={index} style={styles.lineGraphPoint}>
@@ -864,36 +890,42 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
                         </View>
                       );
                     })}
-                  </View>
-                  <View style={styles.xAxis}>
-                    {getWeeklyWeightData().map((day, index) => (
-                      <Text key={index} style={styles.xAxisLabel}>{day.label}</Text>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.graphContainer}>
-                <View style={styles.yAxis}>
-                  <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
-                  <View style={styles.yAxisValues}>
-                    <Text style={styles.yAxisValue}>250</Text>
-                    <Text style={styles.yAxisValue}>200</Text>
-                    <Text style={styles.yAxisValue}>150</Text>
-                    <Text style={styles.yAxisValue}>100</Text>
+                    </View>
+                    <View style={styles.xAxis}>
+                      {weeklyData.map((day, index) => (
+                        <Text key={index} style={styles.xAxisLabel}>{day.label}</Text>
+                      ))}
+                    </View>
                   </View>
                 </View>
-                <View style={styles.graphArea}>
-                  <View style={styles.lineGraphContainer}>
-                    {getMonthlyWeightData().map((week, index) => {
-                      const nextWeek = getMonthlyWeightData()[index + 1];
-                      const hasData = week.weight !== null;
-                      const hasNextData = nextWeek && nextWeek.weight !== null;
-                      
-                      if (!hasData) return null;
-                      
-                      const yPosition = ((250 - week.weight) / 150) * 100;
-                      const nextYPosition = hasNextData ? ((250 - nextWeek.weight) / 150) * 100 : null;
+              );
+            })() : (() => {
+              const monthlyData = getMonthlyWeightData();
+              const weightRange = getWeightRange(monthlyData);
+              
+              return (
+                <View style={styles.graphContainer}>
+                  <View style={styles.yAxis}>
+                    <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
+                    <View style={styles.yAxisValues}>
+                      <Text style={styles.yAxisValue}>{weightRange.max}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.75))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.5))}</Text>
+                      <Text style={styles.yAxisValue}>{Math.round(weightRange.min + (weightRange.range * 0.25))}</Text>
+                      <Text style={styles.yAxisValue}>{weightRange.min}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.graphArea}>
+                    <View style={styles.lineGraphContainer}>
+                      {monthlyData.map((week, index) => {
+                        const nextWeek = monthlyData[index + 1];
+                        const hasData = week.weight !== null;
+                        const hasNextData = nextWeek && nextWeek.weight !== null;
+                        
+                        if (!hasData) return null;
+                        
+                        const yPosition = ((weightRange.max - week.weight) / weightRange.range) * 100;
+                        const nextYPosition = hasNextData ? ((weightRange.max - nextWeek.weight) / weightRange.range) * 100 : null;
                       
                       return (
                         <View key={index} style={styles.lineGraphPoint}>
@@ -925,15 +957,16 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
                         </View>
                       );
                     })}
-                  </View>
-                  <View style={styles.xAxis}>
-                    {getMonthlyWeightData().map((week, index) => (
-                      <Text key={index} style={styles.xAxisLabel}>{week.label}</Text>
-                    ))}
+                    </View>
+                    <View style={styles.xAxis}>
+                      {monthlyData.map((week, index) => (
+                        <Text key={index} style={styles.xAxisLabel}>{week.label}</Text>
+                      ))}
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
+              );
+            })()}
           </View>
         )}
 
