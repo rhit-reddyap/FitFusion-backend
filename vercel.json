@@ -3,10 +3,5 @@
     "pages/api/**/*.js": {
       "runtime": "nodejs18.x"
     }
-  },
-  "env": {
-    "STRIPE_SECRET_KEY": "@stripe_secret_key",
-    "STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
-    "STRIPE_PRICE_ID": "@stripe_price_id"
   }
 }
