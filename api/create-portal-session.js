@@ -1,7 +1,11 @@
-// pages/api/stripe/create-portal-session.js
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// Stripe billing portal session endpoint for Vercel
+import Stripe from 'stripe';
 
-module.exports = async function handler(req, res) {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
+
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -9,29 +13,21 @@ module.exports = async function handler(req, res) {
   try {
     const { customerId, returnUrl } = req.body;
 
-    if (!customerId) {
-      return res.status(400).json({ error: 'Customer ID is required' });
-    }
-
-    // Create or retrieve customer
-    let customer;
-    try {
-      customer = await stripe.customers.retrieve(customerId);
-    } catch (error) {
-      return res.status(400).json({ error: 'Customer not found' });
+    if (!customerId || !returnUrl) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Create billing portal session
     const session = await stripe.billingPortal.sessions.create({
-      customer: customer.id,
-      return_url: returnUrl || 'https://fit-fusion-ai-five.vercel.app',
+      customer: customerId,
+      return_url: returnUrl,
     });
 
-    res.json({ 
-      url: session.url 
+    res.status(200).json({
+      url: session.url,
     });
   } catch (error) {
-    console.error('Error creating portal session:', error);
-    res.status(400).json({ error: error.message });
+    console.error('Create portal session error:', error);
+    res.status(500).json({ error: 'Failed to create portal session' });
   }
 }
