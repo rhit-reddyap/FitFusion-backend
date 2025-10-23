@@ -1,7 +1,11 @@
-// pages/api/stripe/update-payment-method.js
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// Stripe update payment method endpoint for Vercel
+import Stripe from 'stripe';
 
-module.exports = async function handler(req, res) {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
+
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -10,36 +14,27 @@ module.exports = async function handler(req, res) {
     const { subscriptionId, paymentMethodId } = req.body;
 
     if (!subscriptionId || !paymentMethodId) {
-      return res.status(400).json({ error: 'Subscription ID and Payment Method ID are required' });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get the subscription to find the customer
+    // Get subscription from Stripe
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    const customerId = subscription.customer;
 
-    // Attach the new payment method to the customer
+    // Attach payment method to customer
     await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: customerId,
+      customer: subscription.customer,
     });
 
-    // Update the subscription to use the new payment method
+    // Update subscription with new payment method
     await stripe.subscriptions.update(subscriptionId, {
       default_payment_method: paymentMethodId,
     });
 
-    // Update the customer's default payment method
-    await stripe.customers.update(customerId, {
-      invoice_settings: {
-        default_payment_method: paymentMethodId,
-      },
-    });
-
-    res.json({ 
+    res.status(200).json({
       success: true,
-      message: 'Payment method updated successfully'
     });
   } catch (error) {
-    console.error('Error updating payment method:', error);
-    res.status(400).json({ error: error.message });
+    console.error('Update payment method error:', error);
+    res.status(500).json({ error: 'Failed to update payment method' });
   }
 }
