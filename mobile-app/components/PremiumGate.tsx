@@ -167,7 +167,7 @@ export default function PremiumGate({ children, feature, description, onUpgrade 
                 </TouchableOpacity>
               </View>
               <Text style={styles.promoHint}>
-                Try: <Text style={styles.promoCodeHint}>freshmanfriday</Text>
+                Try: <Text style={styles.promoCodeHint}>Enter a valid code</Text>
               </Text>
             </View>
 

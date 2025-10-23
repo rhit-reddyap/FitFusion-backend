@@ -68,7 +68,7 @@ export default function SignInScreen({ onSwitchToSignUp, onSignInSuccess }: Sign
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image 
-                source={require('../assets/icon.png')} 
+                source={require('../assets/fitfusionicon.png')} 
                 style={styles.logoImage}
                 resizeMode="contain"
               />

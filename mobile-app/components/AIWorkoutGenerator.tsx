@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AIService, { AIWorkoutRequest, AIWorkoutResponse } from '../services/aiService';
 import { CustomWorkout } from '../types/workout';
 
 interface AIWorkoutGeneratorProps {
@@ -22,136 +21,6 @@ interface AIWorkoutGeneratorProps {
 }
 
 export default function AIWorkoutGenerator({ visible, onClose, onSaveWorkout }: AIWorkoutGeneratorProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedWorkout, setGeneratedWorkout] = useState<AIWorkoutResponse | null>(null);
-  
-  // Form state
-  const [userGoals, setUserGoals] = useState<string[]>([]);
-  const [fitnessLevel, setFitnessLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
-  const [availableEquipment, setAvailableEquipment] = useState<string[]>([]);
-  const [targetMuscles, setTargetMuscles] = useState<string[]>([]);
-  const [workoutDuration, setWorkoutDuration] = useState(45);
-  const [workoutType, setWorkoutType] = useState<'strength' | 'cardio' | 'hiit' | 'yoga' | 'mixed'>('strength');
-  const [intensity, setIntensity] = useState<'low' | 'medium' | 'high'>('medium');
-  const [focus, setFocus] = useState<'muscle_gain' | 'weight_loss' | 'endurance' | 'flexibility'>('muscle_gain');
-
-  const goals = ['Muscle Building', 'Weight Loss', 'Endurance', 'Strength', 'Flexibility', 'General Fitness'];
-  const equipment = ['Dumbbells', 'Barbell', 'Kettlebell', 'Resistance Bands', 'Bodyweight', 'Cardio Machine', 'Yoga Mat'];
-  const muscles = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core', 'Glutes', 'Full Body'];
-
-  const toggleArrayItem = (array: string[], setArray: (items: string[]) => void, item: string) => {
-    if (array.includes(item)) {
-      setArray(array.filter(i => i !== item));
-    } else {
-      setArray([...array, item]);
-    }
-  };
-
-  const generateWorkout = async () => {
-    if (userGoals.length === 0) {
-      Alert.alert('Error', 'Please select at least one goal');
-      return;
-    }
-
-    if (availableEquipment.length === 0) {
-      Alert.alert('Error', 'Please select at least one piece of equipment');
-      return;
-    }
-
-    if (targetMuscles.length === 0) {
-      Alert.alert('Error', 'Please select at least one target muscle group');
-      return;
-    }
-
-    setIsGenerating(true);
-    setGeneratedWorkout(null);
-
-    try {
-      const request: AIWorkoutRequest = {
-        userGoals,
-        fitnessLevel,
-        availableEquipment,
-        targetMuscles,
-        workoutDuration,
-        preferences: {
-          workoutType,
-          intensity,
-          focus
-        }
-      };
-
-      const response = await AIService.generateWorkout(request);
-      setGeneratedWorkout(response);
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to generate workout');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const saveWorkout = () => {
-    if (!generatedWorkout) return;
-
-    const customWorkout: CustomWorkout = {
-      id: Date.now().toString(),
-      name: generatedWorkout.workout.name,
-      description: generatedWorkout.workout.description,
-      duration: generatedWorkout.workout.duration,
-      difficulty: generatedWorkout.workout.difficulty,
-      category: 'AI Generated',
-      exercises: generatedWorkout.workout.exercises.map(exercise => ({
-        exercise: {
-          id: Date.now().toString() + Math.random(),
-          name: exercise.name,
-          category: 'Strength',
-          muscle: exercise.muscleGroups.join(', '),
-          equipment: 'Various',
-          instructions: exercise.instructions,
-          videoUrl: ''
-        },
-        sets: Array(exercise.sets).fill(null).map(() => ({
-          reps: exercise.reps,
-          weight: exercise.weight || 0,
-          restTime: exercise.restTime,
-          completed: false,
-          actualReps: exercise.reps,
-          actualWeight: exercise.weight || 0,
-          isActive: false
-        }))
-      })),
-      createdAt: new Date().toISOString(),
-      isCustom: true
-    };
-
-    onSaveWorkout(customWorkout);
-    Alert.alert('Success', 'AI-generated workout saved to your library!');
-    onClose();
-  };
-
-  const renderSelectionGrid = (items: string[], selectedItems: string[], onToggle: (item: string) => void, title: string) => (
-    <View style={styles.selectionSection}>
-      <Text style={styles.selectionTitle}>{title}</Text>
-      <View style={styles.selectionGrid}>
-        {items.map((item) => (
-          <TouchableOpacity
-            key={item}
-            style={[
-              styles.selectionItem,
-              selectedItems.includes(item) && styles.selectedItem
-            ]}
-            onPress={() => onToggle(item)}
-          >
-            <Text style={[
-              styles.selectionItemText,
-              selectedItems.includes(item) && styles.selectedItemText
-            ]}>
-              {item}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -165,158 +34,30 @@ export default function AIWorkoutGenerator({ visible, onClose, onSaveWorkout }: 
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {!generatedWorkout ? (
-            <>
-              {/* Goals */}
-              {renderSelectionGrid(goals, userGoals, (item) => toggleArrayItem(userGoals, setUserGoals, item), 'Your Goals')}
-
-              {/* Fitness Level */}
-              <View style={styles.selectionSection}>
-                <Text style={styles.selectionTitle}>Fitness Level</Text>
-                <View style={styles.levelButtons}>
-                  {(['Beginner', 'Intermediate', 'Advanced'] as const).map((level) => (
-                    <TouchableOpacity
-                      key={level}
-                      style={[
-                        styles.levelButton,
-                        fitnessLevel === level && styles.selectedLevelButton
-                      ]}
-                      onPress={() => setFitnessLevel(level)}
-                    >
-                      <Text style={[
-                        styles.levelButtonText,
-                        fitnessLevel === level && styles.selectedLevelButtonText
-                      ]}>
-                        {level}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+          {/* AI Coach Coming Soon */}
+          <View style={styles.comingSoonContainer}>
+            <View style={styles.comingSoonIcon}>
+              <Ionicons name="construct" size={64} color="#F59E0B" />
+            </View>
+            <Text style={styles.comingSoonTitle}>AI Coach Coming Soon!</Text>
+            <Text style={styles.comingSoonDescription}>
+              Our advanced AI workout generator is currently under development. Stay tuned for personalized workout plans powered by cutting-edge AI technology!
+            </Text>
+            <View style={styles.comingSoonTips}>
+              <View style={styles.comingSoonTip}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={styles.comingSoonTipText}>AI Coach coming soon!</Text>
               </View>
-
-              {/* Equipment */}
-              {renderSelectionGrid(equipment, availableEquipment, (item) => toggleArrayItem(availableEquipment, setAvailableEquipment, item), 'Available Equipment')}
-
-              {/* Target Muscles */}
-              {renderSelectionGrid(muscles, targetMuscles, (item) => toggleArrayItem(targetMuscles, setTargetMuscles, item), 'Target Muscles')}
-
-              {/* Workout Duration */}
-              <View style={styles.selectionSection}>
-                <Text style={styles.selectionTitle}>Workout Duration (minutes)</Text>
-                <View style={styles.durationContainer}>
-                  <TouchableOpacity
-                    style={styles.durationButton}
-                    onPress={() => setWorkoutDuration(Math.max(15, workoutDuration - 15))}
-                  >
-                    <Ionicons name="remove" size={20} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <Text style={styles.durationText}>{workoutDuration}</Text>
-                  <TouchableOpacity
-                    style={styles.durationButton}
-                    onPress={() => setWorkoutDuration(Math.min(120, workoutDuration + 15))}
-                  >
-                    <Ionicons name="add" size={20} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.comingSoonTip}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={styles.comingSoonTipText}>Use our existing workout library in the meantime</Text>
               </View>
-
-              {/* Workout Type */}
-              <View style={styles.selectionSection}>
-                <Text style={styles.selectionTitle}>Workout Type</Text>
-                <View style={styles.typeButtons}>
-                  {(['strength', 'cardio', 'hiit', 'yoga', 'mixed'] as const).map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.typeButton,
-                        workoutType === type && styles.selectedTypeButton
-                      ]}
-                      onPress={() => setWorkoutType(type)}
-                    >
-                      <Text style={[
-                        styles.typeButtonText,
-                        workoutType === type && styles.selectedTypeButtonText
-                      ]}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <View style={styles.comingSoonTip}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={styles.comingSoonTipText}>Stay tuned for updates</Text>
               </View>
-
-              {/* Generate Button */}
-              <TouchableOpacity
-                style={[styles.generateButton, isGenerating && styles.disabledButton]}
-                onPress={generateWorkout}
-                disabled={isGenerating}
-              >
-                {isGenerating ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles" size={20} color="#FFFFFF" />
-                    <Text style={styles.generateButtonText}>Generate Workout</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              {/* Generated Workout */}
-              <View style={styles.workoutContainer}>
-                <Text style={styles.workoutName}>{generatedWorkout.workout.name}</Text>
-                <Text style={styles.workoutDescription}>{generatedWorkout.workout.description}</Text>
-                
-                <View style={styles.workoutStats}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Duration</Text>
-                    <Text style={styles.statValue}>{generatedWorkout.workout.duration} min</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Difficulty</Text>
-                    <Text style={styles.statValue}>{generatedWorkout.workout.difficulty}</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Exercises</Text>
-                    <Text style={styles.statValue}>{generatedWorkout.workout.exercises.length}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.reasoningTitle}>Why This Workout?</Text>
-                <Text style={styles.reasoningText}>{generatedWorkout.reasoning}</Text>
-
-                <Text style={styles.exercisesTitle}>Exercises</Text>
-                {generatedWorkout.workout.exercises.map((exercise, index) => (
-                  <View key={index} style={styles.exerciseItem}>
-                    <Text style={styles.exerciseName}>{exercise.name}</Text>
-                    <Text style={styles.exerciseDetails}>
-                      {exercise.sets} sets × {exercise.reps} reps
-                      {exercise.weight && ` @ ${exercise.weight}lbs`}
-                    </Text>
-                    <Text style={styles.exerciseInstructions}>{exercise.instructions}</Text>
-                  </View>
-                ))}
-
-                <Text style={styles.tipsTitle}>Tips</Text>
-                {generatedWorkout.tips.map((tip, index) => (
-                  <Text key={index} style={styles.tipItem}>• {tip}</Text>
-                ))}
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.regenerateButton} onPress={() => setGeneratedWorkout(null)}>
-                  <Ionicons name="refresh" size={20} color="#10B981" />
-                  <Text style={styles.regenerateButtonText}>Generate New</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
-                  <Ionicons name="save" size={20} color="#FFFFFF" />
-                  <Text style={styles.saveButtonText}>Save Workout</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+            </View>
+          </View>
         </ScrollView>
       </LinearGradient>
     </Modal>
@@ -605,6 +346,44 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  comingSoonContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  comingSoonIcon: {
+    marginBottom: 24,
+  },
+  comingSoonTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  comingSoonDescription: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  comingSoonTips: {
+    width: '100%',
+  },
+  comingSoonTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  comingSoonTipText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginLeft: 12,
   },
 });
 

@@ -112,9 +112,15 @@ export default function AdvancedTeamCommunitiesRevamped({
 
       // Fetch user teams
       if (user?.id) {
+        console.log('AdvancedTeamCommunitiesRevamped: Loading teams for user:', user.id);
         const myTeamsData = await TeamService.getUserTeams(user.id);
+        console.log('AdvancedTeamCommunitiesRevamped: Received teams data:', myTeamsData);
+        console.log('AdvancedTeamCommunitiesRevamped: Number of teams:', myTeamsData?.length || 0);
+        console.log('AdvancedTeamCommunitiesRevamped: Setting myTeams state with:', myTeamsData);
         setMyTeams(myTeamsData);
+        console.log('AdvancedTeamCommunitiesRevamped: State set, myTeams should now be:', myTeamsData?.length || 0);
       } else {
+        console.log('AdvancedTeamCommunitiesRevamped: No user found, setting empty teams');
         setMyTeams([]);
       }
 
@@ -169,7 +175,9 @@ export default function AdvancedTeamCommunitiesRevamped({
       const newTeam = await TeamService.createTeam(mappedTeamData, user.id);
       if (newTeam) {
         Alert.alert('Success', 'Team created successfully!');
+        console.log('Team created, refreshing data...');
         await loadAllData();
+        console.log('Data refreshed after team creation');
         setShowCreateTeam(false);
       } else {
         Alert.alert('Error', 'Failed to create team. Please try again.');
@@ -269,7 +277,7 @@ export default function AdvancedTeamCommunitiesRevamped({
   const renderTabContent = () => {
     switch (selectedTab) {
       case 'dashboard':
-        return <AdvancedTeamDashboard onBack={onBack} />;
+        return <AdvancedTeamDashboard onBack={onBack} myTeams={myTeams} />;
       case 'challenges':
         return <AdvancedTeamChallenges onBack={onBack} />;
       case 'chat':

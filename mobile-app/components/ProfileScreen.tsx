@@ -17,6 +17,7 @@ import PersonalInformation from './PersonalInformation';
 import ChangePassword from './ChangePassword';
 import NotificationsSettings from './NotificationsSettings';
 import SubscriptionManagement from './SubscriptionManagement';
+import ReferralSection from './ReferralSection';
 import { DataStorage } from '../utils/dataStorage';
 
 interface ProfileScreenProps {
@@ -37,6 +38,7 @@ export default function ProfileScreen({ onBack, onNavigate }: ProfileScreenProps
   const [showHelp, setShowHelp] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showSubscriptionManagement, setShowSubscriptionManagement] = useState(false);
+  const [showReferralSection, setShowReferralSection] = useState(false);
   const [userPersonalInfo, setUserPersonalInfo] = useState(null);
 
   useEffect(() => {
@@ -120,6 +122,10 @@ export default function ProfileScreen({ onBack, onNavigate }: ProfileScreenProps
 
   const handleSubscriptionManagement = () => {
     setShowSubscriptionManagement(true);
+  };
+
+  const handleReferralSection = () => {
+    setShowReferralSection(true);
   };
 
 
@@ -252,6 +258,12 @@ export default function ProfileScreen({ onBack, onNavigate }: ProfileScreenProps
           )}
         </View>
 
+        {/* Referral Program */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Referral Program</Text>
+          {renderProfileItem('people', 'Refer Friends', 'Earn free months for each friend you refer!', handleReferralSection)}
+        </View>
+
         {/* App Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Settings</Text>
@@ -311,7 +323,7 @@ export default function ProfileScreen({ onBack, onNavigate }: ProfileScreenProps
             </View>
 
             <Text style={styles.promoHint}>
-              Try: <Text style={styles.promoCodeHint}>freshmanfriday</Text>
+              Try: <Text style={styles.promoCodeHint}>Enter a valid code</Text>
             </Text>
 
             <TouchableOpacity
@@ -359,6 +371,12 @@ export default function ProfileScreen({ onBack, onNavigate }: ProfileScreenProps
         visible={showSubscriptionManagement}
         onClose={() => setShowSubscriptionManagement(false)}
         user={user}
+      />
+
+      {/* Referral Section Modal */}
+      <ReferralSection
+        visible={showReferralSection}
+        onClose={() => setShowReferralSection(false)}
       />
     </View>
   );

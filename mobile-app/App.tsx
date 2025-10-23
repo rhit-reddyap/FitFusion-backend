@@ -132,7 +132,7 @@ function AppContent() {
         >
           <View style={styles.authPrompt}>
             <OptimizedImage 
-              source={require('./assets/icon.png')} 
+              source={require('./assets/fitfusionicon.png')} 
               style={styles.logo}
               resizeMode="contain"
             />

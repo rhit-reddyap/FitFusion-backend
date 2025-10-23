@@ -88,18 +88,66 @@ class MetabolismService {
       // Get weekly average weight from body composition logs
       const weeklyAverageWeight = await this.getWeeklyAverageWeight();
       
+      // Calculate activity level based on workout frequency
+      const activityLevel = await this.calculateActivityLevelFromWorkouts();
+      
       const profile: UserProfile = {
         age: personalInfo.age || 25,
         gender: personalInfo.gender || 'male',
         height: personalInfo.height || 175,
         weight: weeklyAverageWeight || personalInfo.weight || 70, // Use weekly average if available
-        activityLevel: personalInfo.activityLevel || 'moderate'
+        activityLevel: activityLevel
       };
 
       return this.getMetabolismData(profile);
     } catch (error) {
       console.error('Error calculating user metabolism:', error);
       return null;
+    }
+  }
+
+  // Calculate activity level based on workout frequency
+  private async calculateActivityLevelFromWorkouts(): Promise<'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'> {
+    try {
+      const { DataStorage } = await import('../utils/dataStorage');
+      
+      // Get workout logs for the past 4 weeks to calculate average weekly workouts
+      const fourWeeksAgo = new Date();
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+      
+      let totalWorkouts = 0;
+      const weeks = 4;
+      
+      for (let week = 0; week < weeks; week++) {
+        const weekStart = new Date(fourWeeksAgo);
+        weekStart.setDate(weekStart.getDate() + (week * 7));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        let weekWorkouts = 0;
+        for (let day = new Date(weekStart); day <= weekEnd; day.setDate(day.getDate() + 1)) {
+          const dateStr = day.toISOString().split('T')[0];
+          const dayWorkouts = await DataStorage.getWorkoutLogs(dateStr);
+          if (Array.isArray(dayWorkouts) && dayWorkouts.length > 0) {
+            weekWorkouts++;
+          }
+        }
+        totalWorkouts += weekWorkouts;
+      }
+      
+      const averageWeeklyWorkouts = totalWorkouts / weeks;
+      
+      // Determine activity level based on workout frequency
+      if (averageWeeklyWorkouts > 4) {
+        return 'very_active';
+      } else if (averageWeeklyWorkouts > 2) {
+        return 'active';
+      } else {
+        return 'sedentary';
+      }
+    } catch (error) {
+      console.error('Error calculating activity level from workouts:', error);
+      return 'moderate'; // Default fallback
     }
   }
 

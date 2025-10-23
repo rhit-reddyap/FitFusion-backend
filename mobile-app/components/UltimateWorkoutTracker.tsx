@@ -145,6 +145,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
   const [weeklyTonnage, setWeeklyTonnage] = useState(0);
   const [dailyTonnage, setDailyTonnage] = useState(0);
   const [dailyMinutes, setDailyMinutes] = useState(0);
+  const [dailyWorkouts, setDailyWorkouts] = useState(0);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [showWorkoutLibrary, setShowWorkoutLibrary] = useState(false);
   const [showVideoCard, setShowVideoCard] = useState(false);
@@ -179,6 +180,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
       await loadWeeklyTonnage();
       await loadDailyTonnage();
       await loadDailyMinutes();
+      await loadDailyWorkouts();
     };
     refreshData();
   }, []);
@@ -234,10 +236,18 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
     try {
       const logs = await DataStorage.getWorkoutLogs();
       const stats = await DataStorage.getUserStats();
-      console.log('Loaded user stats:', stats);
-      console.log('Workout streak:', stats?.workoutStreak);
+      
+      // Calculate actual workout streak based on consecutive days with workouts
+      const actualStreak = await calculateWorkoutStreak();
+      const updatedStats = {
+        ...stats,
+        workoutStreak: actualStreak
+      };
+      
+      console.log('Loaded user stats:', updatedStats);
+      console.log('Actual workout streak:', actualStreak);
       setWorkoutLogs(logs);
-      setUserStats(stats);
+      setUserStats(updatedStats);
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
@@ -321,6 +331,52 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
     } catch (error) {
       console.error('Error loading daily minutes:', error);
       setDailyMinutes(0);
+    }
+  };
+
+  const loadDailyWorkouts = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const workouts = await DataStorage.getWorkoutLogs(today);
+      const workoutCount = Array.isArray(workouts) ? workouts.length : 0;
+      console.log('Loaded daily workouts:', workoutCount);
+      setDailyWorkouts(workoutCount);
+    } catch (error) {
+      console.error('Error loading daily workouts:', error);
+      setDailyWorkouts(0);
+    }
+  };
+
+  // Calculate actual workout streak based on consecutive days with workouts
+  const calculateWorkoutStreak = async () => {
+    try {
+      const today = new Date();
+      let streak = 0;
+      
+      // Check backwards from today to find consecutive days with workouts
+      for (let i = 0; i < 30; i++) { // Check up to 30 days back
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        try {
+          const dayWorkouts = await DataStorage.getWorkoutLogs(dateStr);
+          if (Array.isArray(dayWorkouts) && dayWorkouts.length > 0) {
+            streak++;
+          } else {
+            // If we find a day without workouts, stop counting
+            break;
+          }
+        } catch (error) {
+          console.error('Error checking workouts for date:', dateStr, error);
+          break;
+        }
+      }
+      
+      return streak;
+    } catch (error) {
+      console.error('Error calculating workout streak:', error);
+      return 0;
     }
   };
 
@@ -452,6 +508,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
       await loadWeeklyTonnage();
       await loadDailyTonnage();
       await loadDailyMinutes();
+      await loadDailyWorkouts();
     } catch (error) {
       console.error('Error refreshing data:', error);
     }
@@ -994,6 +1051,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
       await loadWeeklyTonnage();
       await loadDailyTonnage();
       await loadDailyMinutes();
+      await loadDailyWorkouts();
       
     } catch (error) {
       console.error('Error saving workout:', error);
@@ -1036,6 +1094,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
       await loadWeeklyTonnage();
       await loadDailyTonnage();
       await loadDailyMinutes();
+      await loadDailyWorkouts();
       await loadCalendarData(new Date());
       await loadUserData();
       
@@ -1327,7 +1386,7 @@ export default function AdvancedWorkoutTracker({ onBack, navigation }: AdvancedW
                   <View style={styles.heroStatIcon}>
                     <Ionicons name="fitness" size={24} color="#10B981" />
                   </View>
-                  <Text style={styles.heroStatValue}>{userStats?.totalWorkouts || 0}</Text>
+                  <Text style={styles.heroStatValue}>{dailyWorkouts}</Text>
                   <Text style={styles.heroStatLabel}>Workouts</Text>
                 </View>
                 <View style={styles.heroStatItem}>

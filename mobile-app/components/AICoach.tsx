@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AIWorkoutGenerator, WorkoutPreferences, GeneratedWorkout } from '../lib/aiWorkoutGenerator';
+import GeminiService from '../services/geminiService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -203,87 +204,35 @@ export default function AICoach({ visible, onClose, onStartWorkout }: AICoachPro
   };
 
   const generateWorkout = async () => {
-    console.log('Starting workout generation...');
-    console.log('User preferences:', {
-      goals: userGoals,
-      fitnessLevel: fitnessLevel,
-      equipment: availableEquipment,
-      duration: workoutDuration,
-      targetMuscles: targetMuscles,
-      workoutType: workoutType
-    });
+    console.log('AI Coach Coming Soon - Using placeholder...');
     
     setIsAnalyzing(true);
     
     // Simulate AI analysis
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const preferences: WorkoutPreferences = {
-      goals: userGoals,
-      fitnessLevel: fitnessLevel,
-      equipment: availableEquipment,
+    // Show "AI Coach Coming Soon" message
+    const comingSoonWorkout = {
+      id: `coming_soon_${Date.now()}`,
+      name: 'AI Coach Coming Soon',
+      description: 'Our advanced AI workout generator is currently under development. Stay tuned for personalized workout plans powered by cutting-edge AI technology!',
+      difficulty: fitnessLevel,
       duration: workoutDuration,
-      targetMuscles: targetMuscles,
-      workoutType: workoutType
+      type: workoutType,
+      goals: userGoals,
+      equipment: availableEquipment,
+      muscles: targetMuscles,
+      exercises: [],
+      calories: 0,
+      aiGenerated: false,
+      confidence: 0,
+      warmup: [],
+      cooldown: [],
+      tips: ['AI Coach coming soon!', 'Use our existing workout library in the meantime', 'Stay tuned for updates']
     };
     
-    console.log('Generating workout with preferences:', preferences);
-    
-    try {
-      const generatedWorkout = AIWorkoutGenerator.generateWorkout(preferences);
-      console.log('Generated workout:', generatedWorkout);
-    
-      // Convert to the format expected by the UI
-      const workout = {
-        id: generatedWorkout.id,
-        name: generatedWorkout.name,
-        description: generatedWorkout.description,
-        difficulty: generatedWorkout.difficulty,
-        duration: generatedWorkout.duration,
-        type: generatedWorkout.type,
-        goals: generatedWorkout.goals,
-        equipment: generatedWorkout.equipment,
-        muscles: generatedWorkout.muscles,
-        exercises: generatedWorkout.exercises.map(ex => ({
-          exercise: {
-            id: ex.id,
-            name: ex.name,
-            muscle: ex.muscle,
-            primaryMuscles: ex.primaryMuscles,
-            secondaryMuscles: ex.secondaryMuscles,
-            equipment: ex.equipment,
-            difficulty: ex.difficulty,
-            instructions: ex.instructions,
-            formTips: ex.formTips,
-            commonMistakes: ex.commonMistakes,
-            caloriesPerMinute: 5
-          },
-          sets: Array(ex.sets).fill(0).map(() => ({
-            reps: ex.reps,
-            weight: ex.weight || 0,
-            restTime: ex.restTime,
-            completed: false
-          }))
-        })),
-        calories: generatedWorkout.calories,
-        aiGenerated: true,
-        confidence: generatedWorkout.confidence,
-        warmup: generatedWorkout.warmup,
-        cooldown: generatedWorkout.cooldown
-      };
-      
-      console.log('Converted workout:', workout);
-      setAiRecommendations([workout]);
-      setIsAnalyzing(false);
-    } catch (error) {
-      console.error('Error generating workout:', error);
-      setIsAnalyzing(false);
-      Alert.alert(
-        'Error', 
-        'There was an error generating your workout. Please try again.',
-        [{ text: 'OK' }]
-      );
-    }
+    setAiRecommendations([comingSoonWorkout]);
+    setIsAnalyzing(false);
   };
 
 
@@ -313,6 +262,33 @@ export default function AICoach({ visible, onClose, onStartWorkout }: AICoachPro
     }
 
     if (aiRecommendations.length > 0) {
+      const workout = aiRecommendations[0];
+      
+      // Check if this is the "AI Coach Coming Soon" workout
+      if (workout.name === 'AI Coach Coming Soon') {
+        return (
+          <View style={styles.recommendationsContainer}>
+            <View style={styles.comingSoonContainer}>
+              <View style={styles.comingSoonIcon}>
+                <Ionicons name="construct" size={64} color="#F59E0B" />
+              </View>
+              <Text style={styles.comingSoonTitle}>AI Coach Coming Soon!</Text>
+              <Text style={styles.comingSoonDescription}>
+                {workout.description}
+              </Text>
+              <View style={styles.comingSoonTips}>
+                {workout.tips.map((tip, index) => (
+                  <View key={index} style={styles.comingSoonTip}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <Text style={styles.comingSoonTipText}>{tip}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        );
+      }
+      
       return (
         <View style={styles.recommendationsContainer}>
           <Text style={styles.recommendationsTitle}>Your AI Workout is Ready!</Text>

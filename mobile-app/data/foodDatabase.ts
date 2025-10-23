@@ -677,3 +677,11 @@ export const getPopularFoods = (limit: number = 20): FoodItem[] => {
 
 
 
+
+
+
+
+
+
+
+

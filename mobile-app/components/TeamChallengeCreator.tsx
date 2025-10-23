@@ -1,4 +1,4 @@
-npximport React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -92,7 +92,7 @@ export default function TeamChallengeCreator({ visible, onClose, onCreateChallen
     );
   };
 
-  const renderChallengeType = (type) => (
+  const renderChallengeType = (type: any) => (
     <TouchableOpacity
       key={type.id}
       style={[
@@ -116,7 +116,7 @@ export default function TeamChallengeCreator({ visible, onClose, onCreateChallen
     </TouchableOpacity>
   );
 
-  const renderDurationOption = (option) => (
+  const renderDurationOption = (option: any) => (
     <TouchableOpacity
       key={option.value}
       style={[
@@ -134,7 +134,7 @@ export default function TeamChallengeCreator({ visible, onClose, onCreateChallen
     </TouchableOpacity>
   );
 
-  const renderRewardType = (reward) => (
+  const renderRewardType = (reward: any) => (
     <TouchableOpacity
       key={reward.id}
       style={[

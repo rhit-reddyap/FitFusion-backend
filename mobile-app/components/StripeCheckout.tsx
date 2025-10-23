@@ -139,7 +139,7 @@ export default function StripeCheckout({
   const handlePromoCode = () => {
     Alert.alert(
       'Promo Code',
-      'Enter "freshmanfriday" in the profile section to get free premium access!',
+      'Enter a promo code in the profile section to get discounts!',
       [{ text: 'OK' }]
     );
   };

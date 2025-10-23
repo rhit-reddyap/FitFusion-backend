@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, User } from '../lib/supabase';
+import { DataStorage } from '../utils/dataStorage';
 
 // Use User type from supabase.ts
 
@@ -8,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string, displayName: string) => Promise<boolean>;
+  signUp: (email: string, password: string, displayName: string, referralCode?: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   applyPromoCode: (code: string) => Promise<{ success: boolean; message: string }>;
   isPremium: boolean;
@@ -103,6 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(profile);
           // Store auth data for persistence
           await storeAuthData(profile);
+          // Update streak on app load
+          await DataStorage.updateStreak();
         }
       }
     } catch (error) {
@@ -178,6 +181,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(profile);
           // Store auth data for persistence
           await storeAuthData(profile);
+          // Update streak on login
+          await DataStorage.updateStreak();
           return true;
         }
       }
@@ -191,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, displayName: string): Promise<boolean> => {
+  const signUp = async (email: string, password: string, displayName: string, referralCode?: string): Promise<boolean> => {
     try {
       setLoading(true);
       
@@ -205,33 +210,200 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
 
+      console.log('Signup response:', { data, error });
+
       if (error) {
         console.error('Sign up error:', error);
+        
+        // Handle specific error cases
+        if (error.message.includes('rate limit') || error.message.includes('security purposes')) {
+          console.log('Rate limited - please wait before trying again');
+          // For production, we'll let the user know to wait
+          return false;
+        }
+        
+        // Handle other common errors
+        if (error.message.includes('User already registered')) {
+          console.log('User already exists');
+          return false;
+        }
+        
+        if (error.message.includes('Invalid email')) {
+          console.log('Invalid email format');
+          return false;
+        }
+        
         return false;
       }
 
-      if (data.user) {
-        // Create user profile
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required - create profile anyway for production
+        console.log('Email confirmation required, creating profile anyway');
+        
+        // Validate user ID exists
+        if (!data.user.id) {
+          console.error('User ID is missing from signup response');
+          return false;
+        }
+
+        // User exists in signup response, no need to verify with session
+        console.log('User created successfully:', data.user.id);
+        
+        // Small delay to ensure user is fully committed to database
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const newProfile = {
           id: data.user.id,
           email: data.user.email || '',
           display_name: displayName,
           is_premium: false,
           is_admin: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
           promo_codes_used: []
         };
 
         const { error: insertError } = await supabase
           .from('profiles')
-          .insert(newProfile);
+          .upsert(newProfile, { onConflict: 'email' });
+
+        if (!insertError) {
+          setUser(newProfile);
+          await storeAuthData(newProfile);
+          
+          // Apply referral code if provided
+          if (referralCode && referralCode.trim()) {
+            try {
+              const { default: ReferralService } = await import('../services/referralService');
+              const referralApplied = await ReferralService.applyReferralCode(data.user.id, referralCode.trim().toUpperCase());
+              if (referralApplied) {
+                console.log('Referral code applied successfully!');
+              }
+            } catch (error) {
+              console.error('Error applying referral code:', error);
+            }
+          }
+          
+          return true;
+        } else {
+          // Handle duplicate key error - profile might already exist
+          if (insertError.code === '23505' || insertError.message.includes('duplicate key') || insertError.message.includes('profiles_email_key')) {
+            console.log('Profile already exists, fetching existing profile...');
+            
+            // Try to fetch the existing profile
+            const { data: existingProfile, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('email', data.user.email)
+              .single();
+            
+            if (!fetchError && existingProfile) {
+              setUser(existingProfile);
+              await storeAuthData(existingProfile);
+              
+              // Apply referral code if provided
+              if (referralCode && referralCode.trim()) {
+                try {
+                  const { default: ReferralService } = await import('../services/referralService');
+                  const referralApplied = await ReferralService.applyReferralCode(data.user.id, referralCode.trim().toUpperCase());
+                  if (referralApplied) {
+                    console.log('Referral code applied successfully!');
+                  }
+                } catch (error) {
+                  console.error('Error applying referral code:', error);
+                }
+              }
+              
+              return true;
+            }
+          }
+          
+          // Handle foreign key constraint error
+          if (insertError.code === '23503' || insertError.message.includes('foreign key constraint')) {
+            console.error('Foreign key constraint error - user may not exist in auth system');
+            return false;
+          }
+          
+          console.error('Error creating profile:', insertError);
+          return false;
+        }
+      }
+
+      if (data.user && data.session) {
+        // User is immediately authenticated (no email confirmation required)
+        const newProfile = {
+          id: data.user.id,
+          email: data.user.email || '',
+          display_name: displayName,
+          is_premium: false,
+          is_admin: false,
+          promo_codes_used: []
+        };
+
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .upsert(newProfile, { onConflict: 'email' });
 
         if (!insertError) {
           setUser(newProfile);
           // Store auth data for persistence
           await storeAuthData(newProfile);
+          
+          // Apply referral code if provided
+          if (referralCode && referralCode.trim()) {
+            try {
+              const { default: ReferralService } = await import('../services/referralService');
+              const referralApplied = await ReferralService.applyReferralCode(data.user.id, referralCode.trim().toUpperCase());
+              if (referralApplied) {
+                console.log('Referral code applied successfully!');
+              }
+            } catch (error) {
+              console.error('Error applying referral code:', error);
+              // Don't fail signup if referral code fails
+            }
+          }
+          
           return true;
+        } else {
+          // Handle duplicate key error - profile might already exist
+          if (insertError.code === '23505' || insertError.message.includes('duplicate key') || insertError.message.includes('profiles_email_key')) {
+            console.log('Profile already exists, fetching existing profile...');
+            
+            // Try to fetch the existing profile
+            const { data: existingProfile, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('email', data.user.email)
+              .single();
+            
+            if (!fetchError && existingProfile) {
+              setUser(existingProfile);
+              await storeAuthData(existingProfile);
+              
+              // Apply referral code if provided
+              if (referralCode && referralCode.trim()) {
+                try {
+                  const { default: ReferralService } = await import('../services/referralService');
+                  const referralApplied = await ReferralService.applyReferralCode(data.user.id, referralCode.trim().toUpperCase());
+                  if (referralApplied) {
+                    console.log('Referral code applied successfully!');
+                  }
+                } catch (error) {
+                  console.error('Error applying referral code:', error);
+                }
+              }
+              
+              return true;
+            }
+          }
+          
+          // Handle foreign key constraint error
+          if (insertError.code === '23503' || insertError.message.includes('foreign key constraint')) {
+            console.error('Foreign key constraint error - user may not exist in auth system');
+            return false;
+          }
+          
+          console.error('Error creating profile:', insertError);
+          return false;
         }
       }
 
@@ -277,8 +449,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, message: 'This promo code has already been used' };
       }
       
-      // Secret promo code validation (case-insensitive)
+      // Promo code validation (case-insensitive)
       if (code.toLowerCase() === 'freshmanfriday') {
+        // Secret code for close friends only
         console.log('Valid promo code, updating user...');
         
         const updatedUser = {
@@ -353,6 +526,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { success: true, message: 'Promo code applied successfully! Welcome to premium! (Offline mode)' };
         }
       }
+      
+      // No other promo codes available at this time
       
       console.log('Invalid promo code');
       return { success: false, message: 'Invalid promo code' };

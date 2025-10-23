@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from './AuthProvider';
+import { supabase } from '../lib/supabase';
+import ReferralCodeInput from './ReferralCodeInput';
 
 interface SignUpScreenProps {
   onSwitchToSignIn: () => void;
@@ -28,9 +30,17 @@ export default function SignUpScreen({ onSwitchToSignIn, onSignUpSuccess }: Sign
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const [referralCode, setReferralCode] = useState('');
+  const [lastAttemptTime, setLastAttemptTime] = useState(0);
+  const auth = useAuth();
+  const { signUp } = auth || {};
 
   const handleSignUp = async () => {
+    if (!signUp) {
+      Alert.alert('Error', 'Authentication not ready. Please try again.');
+      return;
+    }
+
     if (!email || !password || !confirmPassword || !displayName) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -46,16 +56,49 @@ export default function SignUpScreen({ onSwitchToSignIn, onSignUpSuccess }: Sign
       return;
     }
 
+    // Check if user is trying too quickly (rate limiting protection)
+    const now = Date.now();
+    if (now - lastAttemptTime < 5000) { // 5 seconds between attempts
+      Alert.alert(
+        'Please Wait', 
+        'Please wait a moment before trying to sign up again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setLastAttemptTime(now);
     setLoading(true);
     try {
-      const success = await signUp(email, password, displayName);
+      const success = await signUp(email, password, displayName, referralCode);
       if (success) {
-        onSignUpSuccess();
+        // Check if user needs to confirm email
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // Account created successfully - proceed to app
+        if (referralCode.trim()) {
+          Alert.alert(
+            'Welcome! 🎉', 
+            'Account created successfully! You\'ll get your first month free thanks to the referral code!',
+            [{ text: 'Continue', onPress: onSignUpSuccess }]
+          );
+        } else {
+          onSignUpSuccess();
+        }
       } else {
-        Alert.alert('Error', 'Failed to create account. Please try again.');
+        Alert.alert(
+          'Sign Up Failed', 
+          'Unable to create account. This might be due to:\n\n• Email already in use\n• Network connection issues\n• Server temporarily unavailable\n\nPlease try again in a moment.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error('Sign up error:', error);
+      Alert.alert(
+        'Sign Up Error', 
+        'Something went wrong. Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
@@ -75,7 +118,7 @@ export default function SignUpScreen({ onSwitchToSignIn, onSignUpSuccess }: Sign
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image 
-                source={require('../assets/icon.png')} 
+                source={require('../assets/fitfusionicon.png')} 
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -161,6 +204,16 @@ export default function SignUpScreen({ onSwitchToSignIn, onSignUpSuccess }: Sign
               </TouchableOpacity>
             </View>
 
+            {/* Referral Code Input */}
+            <ReferralCodeInput
+              onReferralApplied={(success, code) => {
+                if (success && code) {
+                  setReferralCode(code);
+                }
+              }}
+              disabled={loading}
+            />
+
             <TouchableOpacity
               style={[styles.signUpButton, loading && styles.disabledButton]}
               onPress={handleSignUp}
@@ -192,6 +245,7 @@ export default function SignUpScreen({ onSwitchToSignIn, onSignUpSuccess }: Sign
                 Already have an account? <Text style={styles.switchButtonHighlight}>Sign In</Text>
               </Text>
             </TouchableOpacity>
+
           </View>
         </LinearGradient>
       </ScrollView>

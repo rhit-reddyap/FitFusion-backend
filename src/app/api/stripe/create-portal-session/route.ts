@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
   try {
     const { customerId, returnUrl } = await request.json();
 
-    if (!customerId) {
+    if (!customerId || !returnUrl) {
       return NextResponse.json(
-        { error: 'Missing customer ID' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
@@ -25,13 +25,20 @@ export async function POST(request: NextRequest) {
     // Get user from Supabase
     const { data: user, error: userError } = await supabase
       .from('profiles')
-      .select('stripe_customer_id')
+      .select('*')
       .eq('id', customerId)
       .single();
 
-    if (userError || !user || !user.stripe_customer_id) {
+    if (userError || !user) {
       return NextResponse.json(
-        { error: 'User or Stripe customer not found' },
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!user.stripe_customer_id) {
+      return NextResponse.json(
+        { error: 'No Stripe customer found' },
         { status: 404 }
       );
     }
@@ -39,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Create billing portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: user.stripe_customer_id,
-      return_url: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/profile`,
+      return_url: returnUrl,
     });
 
     return NextResponse.json({
@@ -53,13 +60,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-

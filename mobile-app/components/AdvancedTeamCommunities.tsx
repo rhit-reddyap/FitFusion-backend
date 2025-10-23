@@ -81,19 +81,23 @@ export default function AdvancedTeamCommunities({ onBack }: AdvancedTeamCommunit
   // Load data functions
   const loadTeams = async () => {
     try {
-      const teamsData = await TeamService.getTeams(20, 0);
+      console.log('Loading teams...');
+      const teamsData = await TeamService.getTeams(50, 0);
+      console.log('Loaded teams:', teamsData);
       setTeams(teamsData);
       
-      // If no teams exist, create state teams
+      // Generate state teams if no teams exist
       if (teamsData.length === 0) {
-        await createStateTeams();
-        // Reload teams after creating state teams
-        const updatedTeams = await TeamService.getTeams(20, 0);
-        setTeams(updatedTeams);
+        console.log('No teams found, generating state teams...');
+        const success = await TeamService.generateStateTeams();
+        if (success) {
+          console.log('State teams generated, reloading...');
+          const updatedTeams = await TeamService.getTeams(50, 0);
+          setTeams(updatedTeams);
+        }
       }
     } catch (error) {
       console.error('Error loading teams:', error);
-      // Fallback to empty array if tables don't exist
       setTeams([]);
     }
   };
@@ -152,10 +156,18 @@ export default function AdvancedTeamCommunities({ onBack }: AdvancedTeamCommunit
   };
 
   const loadMyTeams = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('loadMyTeams: No user found');
+      return;
+    }
     try {
+      console.log('loadMyTeams: Loading teams for user:', user.id);
       const myTeamsData = await TeamService.getUserTeams(user.id);
+      console.log('loadMyTeams: Received teams data:', myTeamsData);
+      console.log('loadMyTeams: Number of teams:', myTeamsData?.length || 0);
+      console.log('loadMyTeams: Setting myTeams state with:', myTeamsData);
       setMyTeams(myTeamsData);
+      console.log('loadMyTeams: State set, myTeams should now be:', myTeamsData?.length || 0);
     } catch (error) {
       console.error('Error loading my teams:', error);
       setMyTeams([]);
@@ -255,13 +267,16 @@ export default function AdvancedTeamCommunities({ onBack }: AdvancedTeamCommunit
   };
 
   const loadAllData = useCallback(async () => {
+    console.log('loadAllData: Starting to load all data...');
     setLoading(true);
     try {
+      console.log('loadAllData: Calling loadTeams, loadMyTeams, loadLeaderboard...');
       await Promise.all([
         loadTeams(),
         loadMyTeams(),
         loadLeaderboard()
       ]);
+      console.log('loadAllData: All data loaded successfully');
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -415,6 +430,7 @@ export default function AdvancedTeamCommunities({ onBack }: AdvancedTeamCommunit
   };
 
   useEffect(() => {
+    console.log('useEffect: Component mounted, calling loadAllData...');
     // Load initial data
     loadAllData();
     
@@ -879,15 +895,20 @@ export default function AdvancedTeamCommunities({ onBack }: AdvancedTeamCommunit
                 <Text style={styles.createTeamButtonText}>Create Team</Text>
               </TouchableOpacity>
             </View>
-            {myTeams.length > 0 ? (
-              myTeams.map(renderTeamCard)
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="people" size={48} color="#6B7280" />
-                <Text style={styles.emptyStateText}>No teams yet</Text>
-                <Text style={styles.emptyStateSubtext}>Create or join a team to get started</Text>
-              </View>
-            )}
+            {(() => {
+              console.log('Rendering My Teams section:');
+              console.log('myTeams.length:', myTeams.length);
+              console.log('myTeams data:', myTeams);
+              return myTeams.length > 0 ? (
+                myTeams.map(renderTeamCard)
+              ) : (
+                <View style={styles.emptyState}>
+                  <Ionicons name="people" size={48} color="#6B7280" />
+                  <Text style={styles.emptyStateText}>No teams yet</Text>
+                  <Text style={styles.emptyStateSubtext}>Create or join a team to get started</Text>
+                </View>
+              );
+            })()}
           </View>
         );
       case 'challenges':
@@ -1000,6 +1021,10 @@ export default function AdvancedTeamCommunities({ onBack }: AdvancedTeamCommunit
     }
   };
 
+  console.log('AdvancedTeamCommunities: Component rendering...');
+  console.log('AdvancedTeamCommunities: myTeams state:', myTeams);
+  console.log('AdvancedTeamCommunities: myTeams.length:', myTeams.length);
+  
   return (
     <View style={styles.container}>
       {/* Header */}

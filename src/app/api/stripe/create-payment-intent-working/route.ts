@@ -1,37 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 
-// Use the correct Stripe secret key
-const stripe = new Stripe('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', {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE!
+);
 
 export async function POST(request: NextRequest) {
   try {
     const { amount, currency, planId, customerId } = await request.json();
 
-    if (!amount || !currency || !customerId) {
+    if (!amount || !currency || !planId || !customerId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Use the correct price ID
-    const finalPlanId = planId || 'price_1RyHEb0yFM5cg5nbtjk5Cnzn';
+    // Get user from Supabase
+    const { data: user, error: userError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', customerId)
+      .single();
 
-    // Create Stripe customer
-    const customer = await stripe.customers.create({
-      email: `${customerId}@example.com`,
-      name: `User ${customerId}`,
-      metadata: {
-        user_id: customerId,
-      },
-    });
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
 
-    // Create ephemeral key for customer
+    let stripeCustomerId = user.stripe_customer_id;
+
+    // Create Stripe customer if doesn't exist
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.display_name,
+        metadata: {
+          user_id: customerId,
+        },
+      });
+
+      stripeCustomerId = customer.id;
+
+      // Update user with Stripe customer ID
+      await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: stripeCustomerId })
+        .eq('id', customerId);
+    }
+
+    // Create ephemeral key for the customer
     const ephemeralKey = await stripe.ephemeralKeys.create(
-      { customer: customer.id },
+      { customer: stripeCustomerId },
       { apiVersion: '2024-06-20' }
     );
 
@@ -39,10 +67,10 @@ export async function POST(request: NextRequest) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: currency,
-      customer: customer.id,
+      customer: stripeCustomerId,
       metadata: {
         user_id: customerId,
-        plan_id: finalPlanId,
+        plan_id: planId,
       },
       automatic_payment_methods: {
         enabled: true,
@@ -51,23 +79,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
-      customerId: customer.id,
+      customerId: stripeCustomerId,
       ephemeralKey: ephemeralKey.secret,
     });
   } catch (error) {
     console.error('Create payment intent error:', error);
     return NextResponse.json(
-      { error: 'Failed to create payment intent', details: error.message },
+      { error: 'Failed to create payment intent' },
       { status: 500 }
     );
   }
 }
-
-
-
-
-
-
-
-
-

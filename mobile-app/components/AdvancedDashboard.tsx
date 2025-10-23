@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { DataStorage } from '../utils/dataStorage';
 import { useAuth } from './AuthProvider';
+import GeminiService from '../services/geminiService';
 import CalorieGoalModal from './CalorieGoalModal';
 
 const { width, height } = Dimensions.get('window');
@@ -32,6 +33,7 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
   const [todaysProgress, setTodaysProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [personalInfo, setPersonalInfo] = useState(null);
+  const [dynamicAIRecommendations, setDynamicAIRecommendations] = useState([]);
   const [showCalorieConsumedModal, setShowCalorieConsumedModal] = useState(false);
   const [showCalorieBurnedModal, setShowCalorieBurnedModal] = useState(false);
   const [calorieBurnedGoal, setCalorieBurnedGoal] = useState(500);
@@ -55,12 +57,199 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
       setTodaysProgress(progress);
       setPersonalInfo(personal);
       setCalorieBurnedGoal(goals.caloriesBurned || 500);
+      
+      // Generate AI recommendations
+      await generateAIRecommendations(stats, progress, personal);
+      
+      // Calculate achievements
+      await calculateAchievements(stats, progress);
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Generate AI recommendations with real-time data
+  const generateAIRecommendations = async (stats: any, progress: any, personal: any) => {
+    try {
+      const recommendations = [];
+      
+      // Get user's current weight from weight logs (stored in analytics)
+      let currentWeight = 70; // Default fallback
+      
+      try {
+        const weightLogs = await DataStorage.getBodyCompositionLogs();
+        if (weightLogs && weightLogs.length > 0) {
+          // Get the most recent weight entry
+          const sortedLogs = weightLogs
+            .filter(log => log.weight && log.weight > 0)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          
+          if (sortedLogs.length > 0) {
+            currentWeight = sortedLogs[0].weight;
+          }
+        }
+      } catch (error) {
+        console.error('Error getting weight from analytics:', error);
+      }
+      
+      console.log('Debug - Weight from analytics:', {
+        currentWeight,
+        weightLogs: await DataStorage.getBodyCompositionLogs()
+      });
+      
+      // If weight is less than 200, assume it's already in lbs (common for US users)
+      // If weight is greater than 200, assume it's in kg and needs conversion
+      let weightInLbs;
+      if (currentWeight < 200) {
+        weightInLbs = currentWeight; // Already in lbs
+      } else {
+        weightInLbs = currentWeight * 2.205; // Convert kg to lbs
+      }
+      
+      const proteinGoal = Math.round(weightInLbs); // 1g per lb of bodyweight
+      const proteinToday = progress?.protein?.current || 0;
+      const proteinNeeded = Math.max(0, proteinGoal - proteinToday);
+      
+      console.log('Protein calculation debug:', {
+        currentWeight,
+        weightInLbs,
+        proteinGoal,
+        proteinToday,
+        proteinNeeded
+      });
+      
+      // Protein recommendation
+      if (proteinNeeded > 0) {
+        recommendations.push({
+          id: 1,
+          type: 'nutrition',
+          title: 'Protein Boost Needed',
+          description: `Add ${proteinNeeded}g more protein to reach your muscle building goals`,
+          icon: 'nutrition',
+          color: '#10B981',
+          priority: 'high',
+          action: 'View Meal Plan'
+        });
+      }
+      
+      // Workout recommendation
+      const workoutsThisWeek = stats?.workoutsThisWeek || 0;
+      const today = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+      const isWeekend = today === 0 || today === 6;
+      
+      if (workoutsThisWeek < 3 && !isWeekend) {
+        recommendations.push({
+          id: 2,
+          type: 'workout',
+          title: 'Workout Reminder',
+          description: `Complete 1 more workout today to stay on track with your fitness goals`,
+          icon: 'fitness',
+          color: '#3B82F6',
+          priority: 'medium',
+          action: 'Start Workout'
+        });
+      }
+      
+      // Hydration recommendation
+      const waterIntake = stats?.waterIntake || 0;
+      const waterGoal = 8; // 8 glasses per day
+      const waterNeeded = Math.max(0, waterGoal - waterIntake);
+      
+      if (waterNeeded > 0) {
+        recommendations.push({
+          id: 3,
+          type: 'hydration',
+          title: 'Hydration Alert',
+          description: `You're ${waterNeeded} glass${waterNeeded !== 1 ? 'es' : ''} behind your daily water goal`,
+          icon: 'water',
+          color: '#06B6D4',
+          priority: 'high',
+          action: 'Log Water'
+        });
+      }
+      
+      setDynamicAIRecommendations(recommendations);
+    } catch (error) {
+      console.error('Error generating AI recommendations:', error);
+      // Keep static recommendations as fallback
+    }
+  };
+
+  // Calculate achievement progress
+  const calculateAchievements = async (stats: any, progress: any) => {
+    try {
+      const updatedAchievements = [...achievements];
+      
+      // Week Warrior: Check actual workout streak (consecutive days with workouts)
+      let workoutStreak = 0;
+      const today = new Date();
+      
+      // Check backwards from today to find consecutive days with workouts
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        try {
+          const dayWorkouts = await DataStorage.getWorkoutLogs(dateStr);
+          if (Array.isArray(dayWorkouts) && dayWorkouts.length > 0) {
+            workoutStreak++;
+          } else {
+            // If we find a day without workouts, stop counting
+            break;
+          }
+        } catch (error) {
+          console.error('Error checking workouts for date:', dateStr, error);
+          break;
+        }
+      }
+      
+      updatedAchievements[0].progress = Math.min(workoutStreak, 7);
+      updatedAchievements[0].earned = workoutStreak >= 7;
+      
+      // Protein Power: Check protein goal hits in the last 7 days
+      let proteinGoalHits = 0;
+      const proteinCheckDate = new Date();
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(proteinCheckDate);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        try {
+          const foodLogs = await DataStorage.getFoodLogs(dateStr);
+          if (Array.isArray(foodLogs)) {
+            const dayProtein = foodLogs.reduce((total, log) => total + (log.protein || 0), 0);
+            const proteinGoal = progress?.protein?.goal || 0;
+            if (dayProtein >= proteinGoal && proteinGoal > 0) {
+              proteinGoalHits++;
+            }
+          }
+        } catch (error) {
+          console.error('Error checking protein for date:', dateStr, error);
+        }
+      }
+      updatedAchievements[1].progress = proteinGoalHits;
+      updatedAchievements[1].earned = proteinGoalHits >= 5;
+      
+      // Hydration Hero: Check if user has been consistently hitting water goals
+      // Since water is tracked as daily intake in user stats, we'll use a simpler approach
+      // Check if current water intake is at or above goal (8 glasses)
+      const currentWaterIntake = stats?.waterIntake || 0;
+      const waterGoal = 8; // 8 glasses per day
+      const hydrationProgress = Math.min(currentWaterIntake, waterGoal);
+      
+      // For now, we'll consider it earned if they've hit their water goal today
+      // In a more advanced implementation, we'd track daily water goals over time
+      updatedAchievements[2].progress = hydrationProgress;
+      updatedAchievements[2].earned = currentWaterIntake >= waterGoal;
+      
+      setAchievements(updatedAchievements);
+    } catch (error) {
+      console.error('Error calculating achievements:', error);
+    }
+  };
 
   // Default stats if data not loaded yet
   const defaultStats = {
@@ -103,11 +292,11 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
     {
       id: 2,
       type: 'workout',
-      title: 'Rest Day Recommendation',
-      description: 'Your recovery score is 85%. Perfect day for light cardio',
-      action: 'Start Recovery',
+      title: 'Workout Reminder',
+      description: 'Complete 1 more workout today to stay on track with your fitness goals',
+      action: 'Start Workout',
       priority: 'medium',
-      icon: 'heart'
+      icon: 'fitness'
     },
     {
       id: 3,
@@ -120,12 +309,12 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
     }
   ];
 
-  const achievements = [
-    { id: 1, name: 'Week Warrior', description: '7-day workout streak', icon: 'trophy', earned: true },
-    { id: 2, name: 'Protein Power', description: 'Hit protein goal 5 days', icon: 'fitness', earned: true },
-    { id: 3, name: 'Hydration Hero', description: 'Perfect water intake week', icon: 'water', earned: false },
-    { id: 4, name: 'Sleep Master', description: '8+ hours for 7 days', icon: 'moon', earned: false }
-  ];
+  // Dynamic achievements that actually track progress
+  const [achievements, setAchievements] = useState([
+    { id: 1, name: 'Week Warrior', description: '7-day workout streak', icon: 'trophy', earned: false, progress: 0, target: 7 },
+    { id: 2, name: 'Protein Power', description: 'Hit protein goal 5 days', icon: 'fitness', earned: false, progress: 0, target: 5 },
+    { id: 3, name: 'Hydration Hero', description: 'Perfect water intake week', icon: 'water', earned: false, progress: 0, target: 7 },
+  ]);
 
   useEffect(() => {
     // Start animations
@@ -253,17 +442,17 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
         onPress={() => {
           // Handle different AI recommendation actions
           switch (rec.type) {
+            case 'insight':
+              Alert.alert('AI Insights', rec.fullText || rec.description);
+              break;
             case 'workout':
-              Alert.alert('Starting Workout', 'Opening workout tracker...');
+              Alert.alert('Workout Reminder', 'Opening workout tracker...');
               break;
             case 'nutrition':
-              Alert.alert('Nutrition Tip', 'Opening food tracker...');
-              break;
-            case 'rest':
-              Alert.alert('Rest Day', 'Take a well-deserved rest! Your body needs it.');
+              Alert.alert('Protein Boost', 'Opening food tracker to log protein...');
               break;
             case 'hydration':
-              Alert.alert('Hydration Reminder', 'Remember to drink water throughout the day!');
+              Alert.alert('Hydration Alert', 'Opening water tracker to log your intake...');
               break;
             default:
               Alert.alert('AI Recommendation', rec.description);
@@ -295,7 +484,14 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
         <Text style={[styles.achievementName, achievement.earned && styles.achievementNameEarned]}>
           {achievement.name}
         </Text>
-        <Text style={styles.achievementDescription}>{achievement.description}</Text>
+        <Text style={styles.achievementDescription}>
+          {achievement.description}
+        </Text>
+        {!achievement.earned && (
+          <Text style={styles.achievementProgress}>
+            {achievement.progress || 0}/{achievement.target}
+          </Text>
+        )}
       </View>
       {achievement.earned && (
         <Ionicons name="checkmark-circle" size={20} color="#10B981" />
@@ -411,7 +607,7 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
         <TouchableOpacity onPress={() => setShowCalorieBurnedModal(true)}>
           {renderStatCard(
             'Metabolism',
-            `${Math.round(progress?.metabolism || 1632)} cal`,
+            `${Math.round(progress?.metabolismCalories || 1632)} cal`,
             'BMR (Base Metabolic Rate)',
             'heart',
             ['#F59E0B', '#D97706'],
@@ -446,7 +642,10 @@ export default function AdvancedDashboard({ onNavigate }: AdvancedDashboardProps
           <Text style={styles.sectionTitle}>AI Recommendations</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {aiRecommendations.map((rec, index) => renderAIRecommendation(rec, index))}
+          {dynamicAIRecommendations.length > 0 
+            ? dynamicAIRecommendations.map((rec, index) => renderAIRecommendation(rec, index))
+            : aiRecommendations.map((rec, index) => renderAIRecommendation(rec, index))
+          }
         </ScrollView>
       </View>
 
@@ -838,6 +1037,12 @@ const styles = StyleSheet.create({
   achievementDescription: {
     fontSize: 14,
     color: '#9CA3AF',
+  },
+  achievementProgress: {
+    fontSize: 12,
+    color: '#10B981',
+    fontWeight: '600',
+    marginTop: 4,
   },
   premiumBanner: {
     marginHorizontal: 20,

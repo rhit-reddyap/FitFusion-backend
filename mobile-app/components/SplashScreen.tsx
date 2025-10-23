@@ -81,7 +81,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           {/* Main logo */}
           <View style={styles.logoWrapper}>
             <Image 
-              source={require('../assets/icon.png')} 
+              source={require('../assets/fitfusionicon.png')} 
               style={styles.logoImage}
               resizeMode="contain"
             />

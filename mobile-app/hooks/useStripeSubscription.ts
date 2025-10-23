@@ -43,7 +43,7 @@ export const useStripeSubscription = () => {
     setLoading(true);
     try {
       // Call your backend API to create subscription
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/create-subscription`, {
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/create-subscription`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ export const useStripeSubscription = () => {
     setLoading(true);
     try {
       // Call your backend API to cancel subscription
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/cancel-subscription`, {
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/cancel-subscription`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export const useStripeSubscription = () => {
     setLoading(true);
     try {
       // Call your backend API to update payment method
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/update-payment-method`, {
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/update-payment-method`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export const useStripeSubscription = () => {
   const getBillingPortalUrl = async () => {
     try {
       // Call your backend API to get billing portal URL
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/create-portal-session`, {
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/create-portal-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

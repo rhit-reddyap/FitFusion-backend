@@ -90,3 +90,11 @@ export default BarcodeScanner;
 
 
 
+
+
+
+
+
+
+
+

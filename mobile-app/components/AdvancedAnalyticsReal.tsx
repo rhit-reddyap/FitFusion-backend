@@ -14,10 +14,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import Svg, { Circle as SvgCircle, Line as SvgLine, Polyline as SvgPolyline, Text as SvgText } from 'react-native-svg';
 import AnalyticsService from '../services/analyticsService';
 import CalorieTargetService from '../services/calorieTargetService';
 import { DataStorage } from '../utils/dataStorage';
-import BodyFatTracker from './BodyFatTracker';
 
 interface AdvancedAnalyticsRealProps {
   onBack: () => void;
@@ -30,9 +30,8 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
   const [calorieTarget, setCalorieTarget] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showBodyFatTracker, setShowBodyFatTracker] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>('week');
   const [weightGraphTimeframe, setWeightGraphTimeframe] = useState<'week' | 'month'>('week');
+  const [tonnageGraphTimeframe, setTonnageGraphTimeframe] = useState<'week' | 'month' | 'year'>('week');
   const [weeklyMetabolismData, setWeeklyMetabolismData] = useState<any>(null);
   const [currentMetabolismEstimate, setCurrentMetabolismEstimate] = useState<any>(null);
   const [weightLogs, setWeightLogs] = useState<any[]>([]);
@@ -43,7 +42,7 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
   useEffect(() => {
     loadAnalytics();
     loadWeightLogs();
-  }, [selectedTimeframe]);
+  }, []);
 
   const loadWeightLogs = async () => {
     try {
@@ -177,6 +176,30 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
     return weeks;
   };
 
+  const getYearlyTonnageData = () => {
+    const now = new Date();
+    const months = [];
+    
+    // Get last 12 months
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+      
+      const monthTonnage = analytics?.weeklyProgress?.filter((week: any) => {
+        const weekDate = new Date(week.week);
+        return weekDate >= monthStart && weekDate <= monthEnd;
+      }).reduce((sum: number, week: any) => sum + (week.tonnage || 0), 0) || 0;
+      
+      months.push({
+        month: i,
+        label: monthDate.toLocaleDateString('en-US', { month: 'short' }),
+        tonnage: monthTonnage
+      });
+    }
+    return months;
+  };
+
   const getWeeklyWeightData = () => {
     console.log('=== WEEKLY DATA DEBUG ===');
     console.log('Current weightLogs:', weightLogs);
@@ -306,6 +329,12 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
       
       setAnalytics(analyticsData);
       setCalorieTarget(targetData);
+      
+      // Calculate weekly metabolism estimate
+      await calculateWeeklyMetabolismEstimate();
+      
+      // Calculate current metabolism estimate
+      await calculateCurrentMetabolismEstimate();
     } catch (error) {
       console.error('Error loading analytics:', error);
       // Set default data instead of showing alert
@@ -315,11 +344,8 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
         totalWorkouts: 0,
         averageWorkoutDuration: 0,
         totalCaloriesBurned: 0,
-        currentBodyFat: 0,
-        bodyFatChange: 0,
         averageDailyCalories: 0,
         weeklyProgress: [],
-        bodyFatHistory: [],
         muscleGroupFrequency: [],
         recommendations: []
       });
@@ -422,56 +448,48 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
   const prepareTonnageChartData = () => {
     if (!analytics?.weeklyProgress || !Array.isArray(analytics.weeklyProgress) || analytics.weeklyProgress.length === 0) {
       // Return default data for empty state
+      const defaultLabels = tonnageGraphTimeframe === 'week' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] :
+                           tonnageGraphTimeframe === 'month' ? ['Week 1', 'Week 2', 'Week 3', 'Week 4'] :
+                           ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
       return {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        labels: defaultLabels,
         datasets: [{
-          data: [0, 0, 0, 0],
+          data: new Array(defaultLabels.length).fill(0),
           color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
           strokeWidth: 3
         }]
       };
     }
     
-    const data = analytics.weeklyProgress.slice(-8); // Last 8 weeks
+    let data, labels;
+    
+    if (tonnageGraphTimeframe === 'week') {
+      // Weekly view - show daily tonnage for current week
+      const weeklyData = getWeeklyTonnageData();
+      data = weeklyData.map(day => (day.tonnage || 0) / 1000);
+      labels = weeklyData.map(day => day.label);
+    } else if (tonnageGraphTimeframe === 'month') {
+      // Monthly view - show weekly tonnage for current month
+      const monthlyData = getMonthlyTonnageData();
+      data = monthlyData.map(week => (week.tonnage || 0) / 1000);
+      labels = monthlyData.map(week => week.label);
+    } else {
+      // Yearly view - show monthly tonnage for last 12 months
+      const yearlyData = getYearlyTonnageData();
+      data = yearlyData.map(month => (month.tonnage || 0) / 1000);
+      labels = yearlyData.map(month => month.label);
+    }
+    
     return {
-      labels: data.map((week: any) => {
-        try {
-          const date = new Date(week.week);
-          return `${date.getMonth() + 1}/${date.getDate()}`;
-        } catch {
-          return 'Week';
-        }
-      }),
+      labels,
       datasets: [{
-        data: data.map((week: any) => (week.tonnage || 0) / 1000), // Convert to thousands
+        data,
         color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
         strokeWidth: 3
       }]
     };
   };
 
-  const prepareBodyFatChartData = () => {
-    if (!analytics?.bodyFatHistory || !Array.isArray(analytics.bodyFatHistory) || analytics.bodyFatHistory.length === 0) {
-      return null;
-    }
-    
-    const data = analytics.bodyFatHistory.slice(-10); // Last 10 entries
-    return {
-      labels: data.map((entry: any) => {
-        try {
-          const date = new Date(entry.date);
-          return `${date.getMonth() + 1}/${date.getDate()}`;
-        } catch {
-          return 'Date';
-        }
-      }),
-      datasets: [{
-        data: data.map((entry: any) => entry.percentage || 0),
-        color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
-        strokeWidth: 3
-      }]
-    };
-  };
 
   const prepareCalorieChartData = () => {
     if (!analytics?.weeklyProgress || !Array.isArray(analytics.weeklyProgress) || analytics.weeklyProgress.length === 0) {
@@ -534,12 +552,6 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
           >
             <Ionicons name="scale" size={20} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={() => setShowBodyFatTracker(true)}
-          >
-            <Ionicons name="fitness" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -550,26 +562,6 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Timeframe Selector */}
-        <View style={styles.timeframeSelector}>
-          {(['week', 'month', 'year'] as const).map((timeframe) => (
-            <TouchableOpacity
-              key={timeframe}
-              style={[
-                styles.timeframeButton,
-                selectedTimeframe === timeframe && styles.timeframeButtonActive
-              ]}
-              onPress={() => setSelectedTimeframe(timeframe)}
-            >
-              <Text style={[
-                styles.timeframeButtonText,
-                selectedTimeframe === timeframe && styles.timeframeButtonTextActive
-              ]}>
-                {timeframe.charAt(0).toUpperCase() + timeframe.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
 
         {/* Current Metabolism Estimate */}
         {currentMetabolismEstimate && (
@@ -579,7 +571,7 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
               style={styles.metabolismGradient}
             >
               <View style={styles.metabolismHeader}>
-                <Ionicons name="flame" size={24} color="#10B981" />
+                <Ionicons name="flame" size={24} color="#06B6D4" />
                 <Text style={styles.metabolismTitle}>Current Metabolism</Text>
               </View>
               
@@ -593,19 +585,11 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
                 </View>
                 
                 <View style={styles.metabolismStatItem}>
-                  <Text style={styles.metabolismStatLabel}>TDEE</Text>
-                  <Text style={styles.metabolismStatValue}>
-                    {Math.round(currentMetabolismEstimate.tdee)} cal/day
-                  </Text>
-                  <Text style={styles.metabolismStatDescription}>Total Daily Energy Expenditure</Text>
-                </View>
-                
-                <View style={styles.metabolismStatItem}>
                   <Text style={styles.metabolismStatLabel}>Activity Level</Text>
                   <Text style={styles.metabolismStatValue}>
                     {currentMetabolismEstimate.activityLevel}
                   </Text>
-                  <Text style={styles.metabolismStatDescription}>Current Activity Level</Text>
+                  <Text style={styles.metabolismStatDescription}>Based on workout frequency</Text>
                 </View>
               </View>
               
@@ -642,36 +626,43 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
             </Text>
           </View>
 
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Metabolism</Text>
-            <Text style={styles.metricValue}>
-              {currentMetabolismEstimate?.bmr ? Math.round(currentMetabolismEstimate.bmr) : 
-               currentMetabolismEstimate?.tdee ? Math.round(currentMetabolismEstimate.tdee) : 
-               '1632'}
-            </Text>
-            <Text style={styles.metricSubtext}>
-              Calories/day (BMR)
-            </Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Body Fat</Text>
-            <Text style={styles.metricValue}>
-              {analytics?.currentBodyFat?.toFixed(1) || 'N/A'}%
-            </Text>
-            <Text style={[
-              styles.metricSubtext,
-              { color: analytics?.bodyFatChange > 0 ? '#EF4444' : '#10B981' }
-            ]}>
-              {analytics?.bodyFatChange > 0 ? '+' : ''}{analytics?.bodyFatChange?.toFixed(1) || 0}%
-            </Text>
-          </View>
         </View>
 
         {/* Tonnage Chart */}
         {prepareTonnageChartData() && (
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Weekly Tonnage (lbs × 1000)</Text>
+            <View style={styles.graphHeader}>
+              <Text style={[styles.chartTitle, { flex: 1, marginRight: 10 }]}>
+                {tonnageGraphTimeframe === 'week' ? 'Weekly' : 
+                 tonnageGraphTimeframe === 'month' ? 'Monthly' : 'Yearly'} Tonnage (lbs x 1000)
+              </Text>
+              <View style={styles.graphToggle}>
+                <TouchableOpacity
+                  style={[styles.toggleButton, tonnageGraphTimeframe === 'week' && styles.toggleButtonActive]}
+                  onPress={() => setTonnageGraphTimeframe('week')}
+                >
+                  <Text style={[styles.toggleButtonText, tonnageGraphTimeframe === 'week' && styles.toggleButtonTextActive]}>
+                    Week
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleButton, tonnageGraphTimeframe === 'month' && styles.toggleButtonActive]}
+                  onPress={() => setTonnageGraphTimeframe('month')}
+                >
+                  <Text style={[styles.toggleButtonText, tonnageGraphTimeframe === 'month' && styles.toggleButtonTextActive]}>
+                    Month
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleButton, tonnageGraphTimeframe === 'year' && styles.toggleButtonActive]}
+                  onPress={() => setTonnageGraphTimeframe('year')}
+                >
+                  <Text style={[styles.toggleButtonText, tonnageGraphTimeframe === 'year' && styles.toggleButtonTextActive]}>
+                    Year
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
             <LineChart
               data={prepareTonnageChartData()!}
               width={screenWidth - 40}
@@ -681,10 +672,10 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
                 backgroundGradientFrom: '#1F2937',
                 backgroundGradientTo: '#1F2937',
                 decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
+                color: (opacity = 1) => `rgba(6, 182, 212, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                 style: { borderRadius: 16 },
-                propsForDots: { r: '6', strokeWidth: '2', stroke: '#10B981' }
+                propsForDots: { r: '6', strokeWidth: '2', stroke: '#06B6D4' }
               }}
               bezier
               style={styles.chart}
@@ -693,28 +684,6 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
         )}
 
         {/* Body Fat Chart */}
-        {prepareBodyFatChartData() && (
-          <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Body Fat Percentage Trend</Text>
-            <LineChart
-              data={prepareBodyFatChartData()!}
-              width={screenWidth - 40}
-              height={220}
-              chartConfig={{
-                backgroundColor: '#1F2937',
-                backgroundGradientFrom: '#1F2937',
-                backgroundGradientTo: '#1F2937',
-                decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                style: { borderRadius: 16 },
-                propsForDots: { r: '6', strokeWidth: '2', stroke: '#8B5CF6' }
-              }}
-              bezier
-              style={styles.chart}
-            />
-          </View>
-        )}
 
         {/* Calorie Target Progress */}
         {calorieTarget && (
@@ -768,7 +737,7 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
         {weeklyMetabolismData && (
           <View style={styles.metabolismEstimateContainer}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="calculator" size={24} color="#10B981" />
+              <Ionicons name="calculator" size={24} color="#06B6D4" />
               <Text style={styles.sectionTitle}>Weekly Metabolism Analysis</Text>
             </View>
             <Text style={styles.sectionDescription}>
@@ -822,7 +791,7 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
 
               <View style={styles.estimateItem}>
                 <View style={styles.estimateHeader}>
-                  <Ionicons name="flame" size={20} color="#10B981" />
+                  <Ionicons name="flame" size={20} color="#06B6D4" />
                   <Text style={styles.estimateLabel}>Daily Metabolism Estimate</Text>
                 </View>
                 <Text style={styles.estimateValue}>
@@ -878,8 +847,8 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
             
             {weightGraphTimeframe === 'week' ? (() => {
               const weeklyData = getWeeklyWeightData();
-              const weightsWithData = weeklyData.filter(d => d.weight !== null);
-              
+              const weightsWithData = weeklyData.filter(d => typeof d.weight === 'number' && !Number.isNaN(d.weight));
+
               if (weightsWithData.length === 0) {
                 return (
                   <View style={styles.graphContainer}>
@@ -890,85 +859,160 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
                   </View>
                 );
               }
-              
-              // Fixed range for better scaling
-              const weights = weightsWithData.map(d => d.weight);
-              const minWeight = Math.min(...weights);
-              const maxWeight = Math.max(...weights);
-              
-              // Use fixed range around the data
-              const range = Math.max(maxWeight - minWeight, 20); // Minimum 20 lb range
-              const center = (minWeight + maxWeight) / 2;
-              const fixedMin = center - range / 2;
-              const fixedMax = center + range / 2;
-              
-              console.log('FIXED RANGE:', { minWeight, maxWeight, fixedMin, fixedMax, range });
-              
+
+              const weightValues = weightsWithData.map(d => Number(d.weight));
+              const minWeight = Math.min(...weightValues);
+              const maxWeight = Math.max(...weightValues);
+              const rawRange = maxWeight - minWeight;
+              const padding = Math.max(rawRange * 0.1, 5);
+              const graphMin = Math.floor((minWeight - padding) / 5) * 5;
+              const graphMax = Math.ceil((maxWeight + padding) / 5) * 5;
+              const graphRange = Math.max(graphMax - graphMin, 1);
+              const yAxisTicks = Array.from({ length: 5 }, (_, idx) =>
+                Math.round(graphMax - (graphRange * idx) / 4)
+              );
+              const tickCount = yAxisTicks.length - 1;
+
+              const GRAPH_WIDTH = 260;
+              const GRAPH_HEIGHT = 200;
+              const GRAPH_HORIZONTAL_PADDING = 24;
+              const GRAPH_TOP_PADDING = 16;
+              const GRAPH_BOTTOM_PADDING = 36;
+              const drawableHeight = GRAPH_HEIGHT - GRAPH_TOP_PADDING - GRAPH_BOTTOM_PADDING;
+
+              const getXPosition = (index: number) => {
+                if (weeklyData.length <= 1) {
+                  return GRAPH_WIDTH / 2;
+                }
+                const step = (GRAPH_WIDTH - GRAPH_HORIZONTAL_PADDING * 2) / (weeklyData.length - 1);
+                return GRAPH_HORIZONTAL_PADDING + index * step;
+              };
+
+              const toPoint = (weight: number | null, index: number) => {
+                if (typeof weight !== 'number' || Number.isNaN(weight)) {
+                  return null;
+                }
+                const normalized = (weight - graphMin) / graphRange;
+                const clamped = Math.min(Math.max(normalized, 0), 1);
+                const x = getXPosition(index);
+                const y = GRAPH_TOP_PADDING + (1 - clamped) * drawableHeight;
+                return { x, y, weight };
+              };
+
+              const points = weeklyData
+                .map((day, index) => toPoint(day.weight, index))
+                .filter((point): point is { x: number; y: number; weight: number } => point !== null);
+
+              const polylinePoints = points.map(point => `${point.x},${point.y}`).join(' ');
+
               return (
                 <View style={styles.graphContainer}>
                   <View style={styles.yAxis}>
-                    <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
-                    <View style={styles.yAxisValues}>
-                      <Text style={styles.yAxisValue}>{Math.round(fixedMax)}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(fixedMin + (range * 0.75))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(fixedMin + (range * 0.5))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(fixedMin + (range * 0.25))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(fixedMin)}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.graphArea}>
-                    <View style={styles.basicGraphContainer}>
-                      {weeklyData.map((day, index) => {
-                        if (!day.weight) return null;
-                        
-                        // Basic positioning - no complex calculations
-                        const x = 10 + (index * 12); // Spread evenly across 7 days (10% + index * 12% = 10%, 22%, 34%, 46%, 58%, 70%, 82%)
-                        const yPercent = ((day.weight - fixedMin) / range) * 80; // Use 80% of height
-                        const y = 90 - yPercent; // Invert Y: 90% - calculated position (10% bottom margin)
-                        
-                        console.log(`${day.label}: ${day.weight}lbs`);
-                        console.log(`  Range: ${fixedMin} to ${fixedMax} (${range})`);
-                        console.log(`  yPercent: ((${day.weight} - ${fixedMin}) / ${range}) * 80 = ${yPercent}%`);
-                        console.log(`  Final Y: 90 - ${yPercent} = ${y}%`);
-                        console.log(`  Position: (${x}%, ${y}%)`);
-                        
+                    <View
+                      style={[
+                        styles.yAxisTicksContainer,
+                        {
+                          height: drawableHeight,
+                          marginTop: GRAPH_TOP_PADDING,
+                          marginBottom: GRAPH_BOTTOM_PADDING,
+                        },
+                      ]}
+                    >
+                      {yAxisTicks.map((value, idx) => {
+                        const yPosition = (drawableHeight * idx) / (tickCount || 1) - 8;
                         return (
-                          <View key={index}>
-                            <View 
-                              style={[
-                                styles.basicGraphDot,
-                                { 
-                                  left: `${x}%`,
-                                  top: `${y}%`,
-                                  position: 'absolute'
-                                }
-                              ]} 
-                            />
-                            <Text style={[styles.basicGraphLabel, { 
-                              left: `${x}%`, 
-                              top: `${y - 10}%`,
-                              position: 'absolute'
-                            }]}>
-                              {day.weight.toFixed(1)}
-                            </Text>
-                          </View>
+                          <Text 
+                            key={`y-${idx}-${value}`} 
+                            style={[
+                              styles.yAxisValue,
+                              { 
+                                position: 'absolute', 
+                                top: yPosition,
+                                right: 0,
+                                width: 50,
+                                textAlign: 'right'
+                              }
+                            ]}
+                          >
+                            {value}
+                          </Text>
                         );
                       })}
                     </View>
-                    <View style={styles.xAxis}>
-                      {weeklyData.map((day, index) => (
-                        <Text key={index} style={styles.xAxisLabel}>
-                          {day.label}
-                        </Text>
+                  </View>
+                  <View style={styles.graphArea}>
+                    <Svg height={GRAPH_HEIGHT} width="100%" viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`} preserveAspectRatio="none">
+                      {yAxisTicks.map((_, idx) => {
+                        const y = GRAPH_TOP_PADDING + (drawableHeight * idx) / (tickCount || 1);
+                        return (
+                          <SvgLine
+                            key={`grid-${idx}`}
+                            x1={GRAPH_HORIZONTAL_PADDING}
+                            y1={y}
+                            x2={GRAPH_WIDTH - GRAPH_HORIZONTAL_PADDING}
+                            y2={y}
+                            stroke="rgba(148, 163, 184, 0.2)"
+                            strokeWidth={1}
+                          />
+                        );
+                      })}
+                      {polylinePoints.length > 0 && (
+                        <SvgPolyline
+                          points={polylinePoints}
+                          fill="none"
+                          stroke="#06B6D4"
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+                      {points.map((point, idx) => (
+                        <SvgCircle
+                          key={`point-${idx}`}
+                          cx={point.x}
+                          cy={point.y}
+                          r={6}
+                          fill="#06B6D4"
+                          stroke="#FFFFFF"
+                          strokeWidth={2}
+                        />
                       ))}
-                    </View>
+                      {points.map((point, idx) => (
+                        <SvgText
+                          key={`label-${idx}`}
+                          x={point.x}
+                          y={Math.max(point.y - 10, GRAPH_TOP_PADDING + 4)}
+                          fontSize={11}
+                          fill="#FFFFFF"
+                          fontWeight="600"
+                          textAnchor="middle"
+                        >
+                          {point.weight.toFixed(1)}
+                        </SvgText>
+                      ))}
+                      {weeklyData.map((day, idx) => {
+                        const x = getXPosition(idx);
+                        return (
+                          <SvgText
+                            key={`x-label-${idx}`}
+                            x={x}
+                            y={GRAPH_HEIGHT - 12}
+                            fontSize={10}
+                            fill="#94A3B8"
+                            textAnchor="middle"
+                          >
+                            {day.label}
+                          </SvgText>
+                        );
+                      })}
+                    </Svg>
                   </View>
                 </View>
               );
             })() : (() => {
               const monthlyData = getMonthlyWeightData();
-              const weightsWithData = monthlyData.filter(d => d.weight !== null);
-              
+              const weightsWithData = monthlyData.filter(d => typeof d.weight === 'number' && !Number.isNaN(d.weight));
+
               if (weightsWithData.length === 0) {
                 return (
                   <View style={styles.graphContainer}>
@@ -979,66 +1023,158 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
                   </View>
                 );
               }
-              
-              // Simple range calculation for monthly
-              const weights = weightsWithData.map(d => d.weight);
-              const minWeight = Math.min(...weights);
-              const maxWeight = Math.max(...weights);
-              const weightRange = maxWeight - minWeight;
-              const padding = Math.max(weightRange * 0.2, 10);
-              const graphMin = minWeight - padding;
-              const graphMax = maxWeight + padding;
-              const graphRange = graphMax - graphMin;
-              
+
+              const weightValues = weightsWithData.map(d => Number(d.weight));
+              const minWeight = Math.min(...weightValues);
+              const maxWeight = Math.max(...weightValues);
+              const rawRange = maxWeight - minWeight;
+              const padding = Math.max(rawRange * 0.15, 5);
+              const graphMin = Math.floor((minWeight - padding) / 5) * 5;
+              const graphMax = Math.ceil((maxWeight + padding) / 5) * 5;
+              const graphRange = Math.max(graphMax - graphMin, 1);
+              const yAxisTicks = Array.from({ length: 5 }, (_, idx) =>
+                Math.round(graphMax - (graphRange * idx) / 4)
+              );
+              const tickCount = yAxisTicks.length - 1;
+
+              const GRAPH_WIDTH = 260;
+              const GRAPH_HEIGHT = 200;
+              const GRAPH_HORIZONTAL_PADDING = 24;
+              const GRAPH_TOP_PADDING = 16;
+              const GRAPH_BOTTOM_PADDING = 36;
+              const drawableHeight = GRAPH_HEIGHT - GRAPH_TOP_PADDING - GRAPH_BOTTOM_PADDING;
+
+              const getXPosition = (index: number) => {
+                if (monthlyData.length <= 1) {
+                  return GRAPH_WIDTH / 2;
+                }
+                const step = (GRAPH_WIDTH - GRAPH_HORIZONTAL_PADDING * 2) / (monthlyData.length - 1);
+                return GRAPH_HORIZONTAL_PADDING + index * step;
+              };
+
+              const toPoint = (weight: number | null, index: number) => {
+                if (typeof weight !== 'number' || Number.isNaN(weight)) {
+                  return null;
+                }
+                const normalized = (weight - graphMin) / graphRange;
+                const clamped = Math.min(Math.max(normalized, 0), 1);
+                const x = getXPosition(index);
+                const y = GRAPH_TOP_PADDING + (1 - clamped) * drawableHeight;
+                return { x, y, weight };
+              };
+
+              const points = monthlyData
+                .map((week, index) => toPoint(week.weight, index))
+                .filter((point): point is { x: number; y: number; weight: number } => point !== null);
+
+              const polylinePoints = points.map(point => `${point.x},${point.y}`).join(' ');
+
               return (
                 <View style={styles.graphContainer}>
                   <View style={styles.yAxis}>
-                    <Text style={styles.yAxisLabel}>Weight (lbs)</Text>
-                    <View style={styles.yAxisValues}>
-                      <Text style={styles.yAxisValue}>{Math.round(graphMax)}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(graphMin + (graphRange * 0.75))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(graphMin + (graphRange * 0.5))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(graphMin + (graphRange * 0.25))}</Text>
-                      <Text style={styles.yAxisValue}>{Math.round(graphMin)}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.graphArea}>
-                    <View style={styles.simpleGraphContainer}>
-                      {monthlyData.map((week, index) => {
-                        if (!week.weight) return null;
-                        
-                        // Simple positioning for monthly
-                        const totalWeeks = monthlyData.length;
-                        const xPos = totalWeeks > 1 ? (index / (totalWeeks - 1)) * 100 : 50;
-                        const yPos = 100 - ((week.weight - graphMin) / graphRange) * 100;
-                        
+                    <View
+                      style={[
+                        styles.yAxisTicksContainer,
+                        {
+                          height: drawableHeight,
+                          marginTop: GRAPH_TOP_PADDING,
+                          marginBottom: GRAPH_BOTTOM_PADDING,
+                        },
+                      ]}
+                    >
+                      {yAxisTicks.map((value, idx) => {
+                        const yPosition = (drawableHeight * idx) / (tickCount || 1) - 8;
                         return (
-                          <View key={index} style={styles.simpleGraphPoint}>
-                            <View 
-                              style={[
-                                styles.simpleGraphDot,
-                                { 
-                                  left: `${xPos}%`,
-                                  top: `${yPos}%`
-                                }
-                              ]} 
-                            />
-                            <Text style={[styles.simpleGraphLabel, { left: `${xPos}%`, top: `${yPos - 25}%` }]}>
-                              {week.weight.toFixed(1)}
-                            </Text>
-                          </View>
+                          <Text 
+                            key={`monthly-y-${idx}-${value}`} 
+                            style={[
+                              styles.yAxisValue,
+                              { 
+                                position: 'absolute', 
+                                top: yPosition,
+                                right: 0,
+                                width: 50,
+                                textAlign: 'right'
+                              }
+                            ]}
+                          >
+                            {value}
+                          </Text>
                         );
                       })}
                     </View>
-                    <View style={styles.xAxis}>
-                      {monthlyData.map((week, index) => (
-                        <Text key={index} style={styles.xAxisLabel}>{week.label}</Text>
+                  </View>
+                  <View style={styles.graphArea}>
+                    <Svg height={GRAPH_HEIGHT} width="100%" viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`} preserveAspectRatio="none">
+                      {yAxisTicks.map((_, idx) => {
+                        const y = GRAPH_TOP_PADDING + (drawableHeight * idx) / (tickCount || 1);
+                        return (
+                          <SvgLine
+                            key={`monthly-grid-${idx}`}
+                            x1={GRAPH_HORIZONTAL_PADDING}
+                            y1={y}
+                            x2={GRAPH_WIDTH - GRAPH_HORIZONTAL_PADDING}
+                            y2={y}
+                            stroke="rgba(148, 163, 184, 0.2)"
+                            strokeWidth={1}
+                          />
+                        );
+                      })}
+                      {polylinePoints.length > 0 && (
+                        <SvgPolyline
+                          points={polylinePoints}
+                          fill="none"
+                          stroke="#3B82F6"
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+                      {points.map((point, idx) => (
+                        <SvgCircle
+                          key={`monthly-point-${idx}`}
+                          cx={point.x}
+                          cy={point.y}
+                          r={6}
+                          fill="#3B82F6"
+                          stroke="#FFFFFF"
+                          strokeWidth={2}
+                        />
                       ))}
-                    </View>
+                      {points.map((point, idx) => (
+                        <SvgText
+                          key={`monthly-label-${idx}`}
+                          x={point.x}
+                          y={Math.max(point.y - 10, GRAPH_TOP_PADDING + 4)}
+                          fontSize={11}
+                          fill="#FFFFFF"
+                          fontWeight="600"
+                          textAnchor="middle"
+                        >
+                          {point.weight.toFixed(1)}
+                        </SvgText>
+                      ))}
+                      {monthlyData.map((week, idx) => {
+                        const x = getXPosition(idx);
+                        return (
+                          <SvgText
+                            key={`monthly-x-${idx}`}
+                            x={x}
+                            y={GRAPH_HEIGHT - 12}
+                            fontSize={10}
+                            fill="#94A3B8"
+                            textAnchor="middle"
+                          >
+                            {week.label}
+                          </SvgText>
+                        );
+                      })}
+                    </Svg>
                   </View>
                 </View>
               );
             })()}
+
           </View>
         )}
 
@@ -1056,7 +1192,7 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
                       rec.type === 'nutrition' ? 'restaurant' : 'bed'
                     } 
                     size={20} 
-                    color="#10B981" 
+                    color="#06B6D4" 
                   />
                   <Text style={styles.recommendationType}>
                     {rec.type.charAt(0).toUpperCase() + rec.type.slice(1)}
@@ -1076,11 +1212,6 @@ export default function AdvancedAnalyticsReal({ onBack }: AdvancedAnalyticsRealP
 
       </ScrollView>
 
-      {/* Body Fat Tracker Modal */}
-      <BodyFatTracker
-        visible={showBodyFatTracker}
-        onClose={() => setShowBodyFatTracker(false)}
-      />
 
       {/* Weight Logging Modal */}
       <Modal
@@ -1214,7 +1345,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -1224,30 +1355,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-  },
-  timeframeSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    padding: 4,
-    marginVertical: 20,
-  },
-  timeframeButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  timeframeButtonActive: {
-    backgroundColor: '#10B981',
-  },
-  timeframeButtonText: {
-    color: '#9CA3AF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  timeframeButtonTextActive: {
-    color: '#FFFFFF',
   },
   metricsContainer: {
     flexDirection: 'row',
@@ -1288,7 +1395,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 16,
-    textAlign: 'center',
   },
   chart: {
     borderRadius: 16,
@@ -1449,7 +1555,7 @@ const styles = StyleSheet.create({
   estimateValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#10B981',
+    color: '#06B6D4',
     marginBottom: 4,
   },
   estimateDescription: {
@@ -1495,7 +1601,7 @@ const styles = StyleSheet.create({
   metabolismStatValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#10B981',
+    color: '#06B6D4',
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -1527,7 +1633,7 @@ const styles = StyleSheet.create({
   metabolismGradient: {
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#10B981',
+    shadowColor: '#06B6D4',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -1563,7 +1669,7 @@ const styles = StyleSheet.create({
   metabolismStatValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#10B981',
+    color: '#06B6D4',
     marginBottom: 4,
     textAlign: 'center',
   },
@@ -1576,7 +1682,7 @@ const styles = StyleSheet.create({
   metabolismNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(6, 182, 212, 0.1)',
     borderRadius: 8,
     padding: 12,
   },
@@ -1612,7 +1718,7 @@ const styles = StyleSheet.create({
   weightInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: '#06B6D4',
     borderRadius: 12,
     padding: 15,
     fontSize: 24,
@@ -1640,7 +1746,7 @@ const styles = StyleSheet.create({
     borderColor: '#EF4444',
   },
   saveButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
   },
   cancelButtonText: {
     color: '#EF4444',
@@ -1675,7 +1781,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weightBarFill: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     width: 20,
     borderRadius: 10,
     marginBottom: 8,
@@ -1715,7 +1821,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weightProgressBarFill: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     width: 20,
     borderRadius: 10,
     marginBottom: 8,
@@ -1730,7 +1836,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 12,
     height: 12,
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     borderRadius: 6,
     left: 4,
     borderWidth: 2,
@@ -1750,7 +1856,7 @@ const styles = StyleSheet.create({
   weightInputDate: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#10B981',
+    color: '#06B6D4',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -1769,7 +1875,7 @@ const styles = StyleSheet.create({
   weightInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: '#06B6D4',
     borderRadius: 12,
     padding: 15,
     fontSize: 24,
@@ -1790,7 +1896,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   weightUnitButtonActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
   },
   weightUnitButtonText: {
     fontSize: 16,
@@ -1861,6 +1967,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    flexWrap: 'wrap',
   },
   graphToggle: {
     flexDirection: 'row',
@@ -1874,7 +1981,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   toggleButtonActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
   },
   toggleButtonText: {
     fontSize: 14,
@@ -1893,22 +2000,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingRight: 8,
   },
-  yAxisLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '600',
-    transform: [{ rotate: '-90deg' }],
-    marginBottom: 20,
-  },
-  yAxisValues: {
+  yAxisTicksContainer: {
     flex: 1,
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    width: '100%',
+    position: 'relative',
   },
   yAxisValue: {
     fontSize: 10,
     color: '#6B7280',
     textAlign: 'right',
+    position: 'absolute',
   },
   graphArea: {
     flex: 1,
@@ -1965,13 +2068,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 12,
     height: 12,
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     borderRadius: 6,
     marginLeft: -6,
     marginTop: -6,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    shadowColor: '#10B981',
+    shadowColor: '#06B6D4',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -1980,7 +2083,7 @@ const styles = StyleSheet.create({
   lineGraphLine: {
     position: 'absolute',
     height: 2,
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     marginTop: -1,
   },
   lineGraphValue: {
@@ -2024,13 +2127,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 16,
     height: 16,
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     borderRadius: 8,
     marginLeft: -8,
     marginTop: -8,
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    shadowColor: '#10B981',
+    shadowColor: '#06B6D4',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -2085,11 +2188,11 @@ const styles = StyleSheet.create({
   basicGraphDot: {
     width: 14,
     height: 14,
-    backgroundColor: '#10B981',
+    backgroundColor: '#06B6D4',
     borderRadius: 7,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    shadowColor: '#10B981',
+    shadowColor: '#06B6D4',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 3,
@@ -2107,6 +2210,9 @@ const styles = StyleSheet.create({
     minWidth: 35,
   },
 });
+
+
+
 
 
 

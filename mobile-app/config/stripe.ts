@@ -15,7 +15,7 @@ export const STRIPE_CONFIG = {
   countryCode: 'US',
   
   // API URL for backend calls
-  apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+  apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://fit-fusion-backend-ui5g.vercel.app',
 };
 
 // Subscription plans
@@ -55,22 +55,5 @@ export const SUBSCRIPTION_PLANS = {
 
 // Promo codes
 export const PROMO_CODES = {
-  'freshmanfriday': {
-    type: 'percentage',
-    value: 100, // 100% off (free)
-    description: 'Free premium access for friends',
-    valid: true
-  },
-  'welcome10': {
-    type: 'percentage',
-    value: 10, // 10% off
-    description: 'Welcome discount',
-    valid: true
-  },
-  'student50': {
-    type: 'percentage',
-    value: 50, // 50% off
-    description: 'Student discount',
-    valid: true
-  }
+  // Promo codes will be added later
 };

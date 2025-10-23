@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { DataStorage } from '../utils/dataStorage';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthProvider';
 
 interface PersonalInformationProps {
   visible: boolean;
@@ -24,6 +26,7 @@ interface PersonalInformationProps {
 interface UserInfo {
   firstName: string;
   lastName: string;
+  displayName: string;
   email: string;
   phone: string;
   dateOfBirth: string;
@@ -39,9 +42,11 @@ interface UserInfo {
 }
 
 export default function PersonalInformation({ visible, onClose, onSave }: PersonalInformationProps) {
+  const { user } = useAuth();
   const [userInfo, setUserInfo] = useState<UserInfo>({
     firstName: '',
     lastName: '',
+    displayName: '',
     email: '',
     phone: '',
     dateOfBirth: '',
@@ -77,9 +82,40 @@ export default function PersonalInformation({ visible, onClose, onSave }: Person
 
   const loadUserInfo = async () => {
     try {
+      // Load from Supabase first
+      if (user?.id) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profile && !error) {
+          setUserInfo(prev => ({
+            ...prev,
+            email: profile.email || user.email || '',
+            displayName: profile.display_name || '',
+            firstName: prev.firstName || '',
+            lastName: prev.lastName || '',
+          }));
+        }
+      }
+
+      // Also load from local storage as fallback
       const savedInfo = await DataStorage.getPersonalInfo();
       if (savedInfo) {
-        setUserInfo(savedInfo);
+        setUserInfo(prev => ({
+          ...prev,
+          ...savedInfo,
+          email: prev.email || user?.email || '',
+          displayName: prev.displayName || savedInfo.firstName + ' ' + savedInfo.lastName || '',
+        }));
+      } else {
+        // Set default values
+        setUserInfo(prev => ({
+          ...prev,
+          email: user?.email || '',
+        }));
       }
     } catch (error) {
       console.error('Error loading user info:', error);
@@ -87,13 +123,8 @@ export default function PersonalInformation({ visible, onClose, onSave }: Person
   };
 
   const handleSave = async () => {
-    if (!userInfo.firstName.trim()) {
-      Alert.alert('Error', 'Please enter your first name');
-      return;
-    }
-
-    if (!userInfo.lastName.trim()) {
-      Alert.alert('Error', 'Please enter your last name');
+    if (!userInfo.displayName.trim()) {
+      Alert.alert('Error', 'Please enter your display name');
       return;
     }
 
@@ -104,7 +135,27 @@ export default function PersonalInformation({ visible, onClose, onSave }: Person
 
     try {
       setLoading(true);
+      
+      // Save to Supabase first
+      if (user?.id) {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            email: userInfo.email,
+            display_name: userInfo.displayName,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
+      }
+
+      // Also save to local storage as backup
       await DataStorage.savePersonalInfo(userInfo);
+      
       onSave(userInfo);
       Alert.alert('Success', 'Personal information saved successfully!');
       onClose();
@@ -244,9 +295,20 @@ export default function PersonalInformation({ visible, onClose, onSave }: Person
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
             
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Display Name *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={userInfo.displayName}
+                onChangeText={(value) => handleInputChange('displayName', value)}
+                placeholder="How you want to appear in teams (e.g., John Doe)"
+                placeholderTextColor="#6B7280"
+              />
+            </View>
+
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.inputLabel}>First Name *</Text>
+                <Text style={styles.inputLabel}>First Name</Text>
                 <TextInput
                   style={styles.textInput}
                   value={userInfo.firstName}
@@ -256,7 +318,7 @@ export default function PersonalInformation({ visible, onClose, onSave }: Person
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.inputLabel}>Last Name *</Text>
+                <Text style={styles.inputLabel}>Last Name</Text>
                 <TextInput
                   style={styles.textInput}
                   value={userInfo.lastName}

@@ -233,36 +233,49 @@ export class DataStorage {
     }
   }
 
-  // Update streak based on activity
+  // Update streak based on login activity
   static async updateStreak() {
     try {
       const stats = await this.getUserStats();
       const today = new Date().toISOString().split('T')[0];
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      // Check if user was active today
+      // Check if user was active today (logged in today)
       const todayWorkouts = await this.getWorkoutLogs(today);
       const todayFood = await this.getFoodLogs(today);
       const wasActiveToday = (Array.isArray(todayWorkouts) ? todayWorkouts.length : 0) > 0 || (Array.isArray(todayFood) ? todayFood.length : 0) > 0;
       
-      if (wasActiveToday) {
-        // Check if yesterday was also active
-        const yesterdayWorkouts = await this.getWorkoutLogs(yesterday);
-        const yesterdayFood = await this.getFoodLogs(yesterday);
-        const wasActiveYesterday = (Array.isArray(yesterdayWorkouts) ? yesterdayWorkouts.length : 0) > 0 || (Array.isArray(yesterdayFood) ? yesterdayFood.length : 0) > 0;
-        
-        if (wasActiveYesterday) {
-          // Continue streak
-          const newStreak = stats.currentStreak + 1;
-          await this.updateUserStats({
-            currentStreak: newStreak,
-            longestStreak: Math.max(newStreak, stats.longestStreak)
-          });
+      // Check if user was active yesterday
+      const yesterdayWorkouts = await this.getWorkoutLogs(yesterday);
+      const yesterdayFood = await this.getFoodLogs(yesterday);
+      const wasActiveYesterday = (Array.isArray(yesterdayWorkouts) ? yesterdayWorkouts.length : 0) > 0 || (Array.isArray(yesterdayFood) ? yesterdayFood.length : 0) > 0;
+      
+      // Check if we already updated streak for today
+      const lastStreakUpdate = stats.lastStreakUpdate || '';
+      
+      if (lastStreakUpdate !== today) {
+        if (wasActiveToday) {
+          if (wasActiveYesterday) {
+            // Continue streak
+            const newStreak = stats.currentStreak + 1;
+            await this.updateUserStats({
+              currentStreak: newStreak,
+              longestStreak: Math.max(newStreak, stats.longestStreak),
+              lastStreakUpdate: today
+            });
+          } else {
+            // Start new streak (user was active today but not yesterday)
+            await this.updateUserStats({
+              currentStreak: 1,
+              longestStreak: Math.max(1, stats.longestStreak),
+              lastStreakUpdate: today
+            });
+          }
         } else {
-          // Start new streak
+          // User not active today, but if they were active yesterday, keep current streak
+          // Don't reset streak if user just hasn't been active today yet
           await this.updateUserStats({
-            currentStreak: 1,
-            longestStreak: Math.max(1, stats.longestStreak)
+            lastStreakUpdate: today
           });
         }
       }
