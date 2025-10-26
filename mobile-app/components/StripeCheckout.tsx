@@ -47,7 +47,7 @@ export default function StripeCheckout({
       setLoading(true);
 
       // Create payment intent on your backend
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/create-payment-intent-working`, {
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/create-payment-intent-simple`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
