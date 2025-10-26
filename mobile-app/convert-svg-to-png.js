@@ -1,0 +1,23 @@
+// Simple script to help convert SVG to PNG
+console.log('SVG to PNG Conversion Guide:');
+console.log('');
+console.log('You need to convert fitfusion-icon.svg to PNG format.');
+console.log('');
+console.log('Options:');
+console.log('1. Online converters:');
+console.log('   - https://convertio.co/svg-png/');
+console.log('   - https://cloudconvert.com/svg-to-png');
+console.log('   - https://www.freeconvert.com/svg-to-png');
+console.log('');
+console.log('2. Image editors:');
+console.log('   - Photoshop, GIMP, Canva');
+console.log('   - Export as PNG');
+console.log('');
+console.log('3. Required sizes:');
+console.log('   - Main icon: 1024x1024 pixels');
+console.log('   - Adaptive icon: 1024x1024 pixels');
+console.log('   - Splash screen: 1200x1200 pixels');
+console.log('');
+console.log('After conversion, save as:');
+console.log('- fitfusion-icon.png (1024x1024)');
+console.log('- fitfusion-splash.png (1200x1200)');
