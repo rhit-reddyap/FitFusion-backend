@@ -47,7 +47,7 @@ export default function StripeCheckout({
       setLoading(true);
 
       // Create payment intent on your backend
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/create-payment-intent-working`, {
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/create-payment-intent-simple`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +60,24 @@ export default function StripeCheckout({
         }),
       });
 
-      const { clientSecret, customerId, ephemeralKey } = await response.json();
+      // Check if response is ok
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
+
+      // Try to parse JSON response
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        const errorText = await response.text();
+        console.error('JSON Parse Error:', parseError, 'Response:', errorText);
+        throw new Error(`Invalid response format: ${errorText}`);
+      }
+
+      const { clientSecret, customerId, ephemeralKey } = responseData;
 
       if (!clientSecret) {
         throw new Error('Failed to create payment intent');
@@ -78,14 +95,14 @@ export default function StripeCheckout({
 
       if (error) {
         console.error('Payment sheet initialization error:', error);
-        Alert.alert('Error', 'Failed to initialize payment. Please try again.');
+        Alert.alert('Error', `Failed to initialize payment: ${error.message || 'Unknown error'}`);
         return;
       }
 
       setPaymentSheetEnabled(true);
     } catch (error) {
       console.error('Initialize payment sheet error:', error);
-      Alert.alert('Error', 'Failed to set up payment. Please try again.');
+      Alert.alert('Error', `Failed to set up payment: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

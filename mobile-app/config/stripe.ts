@@ -3,7 +3,7 @@
 
 export const STRIPE_CONFIG = {
   // Publishable key - safe to use in mobile apps
-  publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RyH7b0yFM5cg5nbQK12hRT2tph5BC8Xr4D9uceY1ZhlqWQncRTTtS7S2tv5rMyVDLrXNHOwUOM12FTEbUtbW4Iv00hGXFJNA1',
+  publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RwPM1DWZWYqINdcEcgEasd5e7r9JmOUvgmpjn4Z51tDh0q2yAjMwDNaQEF8yu7erH6q54ETm8F99LVxg30DquUk00uPPirPAd',
   
   // Your Stripe account ID (optional, for multi-account setups)
   stripeAccountId: process.env.EXPO_PUBLIC_STRIPE_ACCOUNT_ID || '',
@@ -21,7 +21,7 @@ export const STRIPE_CONFIG = {
 // Subscription plans
 export const SUBSCRIPTION_PLANS = {
   monthly: {
-    id: process.env.EXPO_PUBLIC_STRIPE_MONTHLY_PRICE_ID || 'price_1RyHEb0yFM5cg5nbtjk5Cnzn',
+    id: process.env.EXPO_PUBLIC_STRIPE_MONTHLY_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
     name: 'Monthly Premium',
     price: 5.00,
     currency: 'usd',
@@ -36,7 +36,7 @@ export const SUBSCRIPTION_PLANS = {
     ]
   },
   yearly: {
-    id: process.env.EXPO_PUBLIC_STRIPE_ANNUAL_PRICE_ID || 'yearly_premium',
+    id: process.env.EXPO_PUBLIC_STRIPE_ANNUAL_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
     name: 'Yearly Premium',
     price: 50.00,
     currency: 'usd',

@@ -6,8 +6,4 @@ export default function handler(req, res) {
     service: 'FitFusion Backend API',
     method: req.method
   });
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> minimal-api

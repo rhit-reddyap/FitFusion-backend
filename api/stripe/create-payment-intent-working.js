@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Stripe payment intent endpoint for Vercel
 import Stripe from 'stripe';
 
@@ -6,6 +7,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export default async function handler(req, res) {
+=======
+// Working Stripe payment intent endpoint
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+>>>>>>> minimal-api
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -13,6 +28,7 @@ export default async function handler(req, res) {
   try {
     const { amount, currency, planId, customerId } = req.body;
 
+<<<<<<< HEAD
     if (!amount || !currency || !planId || !customerId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -46,3 +62,18 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Failed to create payment intent' });
   }
 }
+=======
+    // For now, return a mock response to test the connection
+    res.status(200).json({
+      clientSecret: 'pi_test_mock_client_secret',
+      customerId: customerId || 'test_customer',
+      ephemeralKey: 'ek_test_mock_ephemeral_key',
+      message: 'Mock response - Stripe integration in progress'
+    });
+
+  } catch (error) {
+    console.error('Payment intent error:', error);
+    res.status(500).json({ error: 'Failed to create payment intent' });
+  }
+}
+>>>>>>> minimal-api

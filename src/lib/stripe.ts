@@ -5,10 +5,10 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export const STRIPE_CONFIG = {
-  monthlyPriceId: process.env.STRIPE_MONTHLY_PRICE_ID!,
-  annualPriceId: process.env.STRIPE_ANNUAL_PRICE_ID!,
-  cookbookPriceId: process.env.STRIPE_COOKBOOK_PRICE_ID!,
-  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+  monthlyPriceId: process.env.STRIPE_MONTHLY_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
+  annualPriceId: process.env.STRIPE_ANNUAL_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
+  cookbookPriceId: process.env.STRIPE_COOKBOOK_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_your_webhook_secret_here',
 };
 
 export const PRICING_PLANS = {

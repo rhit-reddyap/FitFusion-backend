@@ -3,7 +3,11 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
 // Use the correct Stripe secret key
+<<<<<<< HEAD
 const stripe = new Stripe('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', {
+=======
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+>>>>>>> minimal-api
   apiVersion: '2024-06-20',
 });
 
@@ -24,7 +28,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Use the correct price ID if not provided
+<<<<<<< HEAD
     const finalPlanId = planId || 'price_1RyHEb0yFM5cg5nbtjk5Cnzn';
+=======
+    const finalPlanId = planId || 'price_1SMYDWDWZWYqINdc14CRwrXR';
+>>>>>>> minimal-api
 
     // Get user from Supabase
     const { data: user, error: userError } = await supabase
