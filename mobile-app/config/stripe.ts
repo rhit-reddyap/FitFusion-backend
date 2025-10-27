@@ -15,7 +15,7 @@ export const STRIPE_CONFIG = {
   countryCode: 'US',
   
   // API URL for backend calls
-  apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://fit-fusion-backend-ui5g.vercel.app',
+  apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.245:3000',
 };
 
 // Subscription plans
