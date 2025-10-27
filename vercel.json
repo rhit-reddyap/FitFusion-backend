@@ -12,6 +12,9 @@
       "dest": "/api/$1"
     }
   ],
-  "env": {
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node"
+    }
   }
 }
