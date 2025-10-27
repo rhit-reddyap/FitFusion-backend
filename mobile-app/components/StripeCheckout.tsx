@@ -48,7 +48,7 @@ export default function StripeCheckout({
       setLoading(true);
 
       // Create checkout session on your backend
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/create-checkout-session`, {
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/stripe/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

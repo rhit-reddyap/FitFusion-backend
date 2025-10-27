@@ -1,36 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createCheckoutSession, getCustomerByEmail, createCustomer } from "@/lib/stripe";
+import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-06-20',
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { priceId, userEmail, promoCode } = await request.json();
+    const { priceId, userId, successUrl, cancelUrl } = await request.json();
 
-    if (!priceId || !userEmail) {
+    if (!priceId || !userId) {
       return NextResponse.json(
-        { error: "Missing required parameters" },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Get or create Stripe customer
-    let customer = await getCustomerByEmail(userEmail);
-    if (!customer) {
-      customer = await createCustomer(userEmail);
-    }
-
-    const session = await createCheckoutSession({
-      priceId,
-      customerId: customer.id,
-      successUrl: `${request.nextUrl.origin}/dashboard?success=true`,
-      cancelUrl: `${request.nextUrl.origin}/dashboard?canceled=true`,
-      promoCode,
+    // Create Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      client_reference_id: userId,
+      success_url: successUrl || 'fitfusionai://premium-success',
+      cancel_url: cancelUrl || 'fitfusionai://premium-cancel',
+      metadata: {
+        user_id: userId,
+      },
     });
 
-    return NextResponse.json({ sessionId: session.id, url: session.url });
+    return NextResponse.json({
+      url: session.url,
+    });
   } catch (error) {
-    console.error("Error creating checkout session:", error);
+    console.error('Create checkout session error:', error);
     return NextResponse.json(
-      { error: "Failed to create checkout session" },
+      { error: 'Failed to create checkout session', details: error.message },
       { status: 500 }
     );
   }
