@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  Linking
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,17 +47,17 @@ export default function StripeCheckout({
     try {
       setLoading(true);
 
-      // Create payment intent on your backend
-      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/payment-intent`, {
+      // Create checkout session on your backend
+      const response = await fetch(`${STRIPE_CONFIG.apiUrl}/api/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: Math.round(plan.price * 100), // Convert to cents
-          currency: plan.currency,
-          planId: plan.id,
-          customerId: user?.id,
+          priceId: plan.id,
+          userId: user?.id,
+          successUrl: 'fitfusionai://premium-success',
+          cancelUrl: 'fitfusionai://premium-cancel',
         }),
       });
 
@@ -77,32 +78,23 @@ export default function StripeCheckout({
         throw new Error(`Invalid response format: ${errorText}`);
       }
 
-      const { clientSecret, customerId, ephemeralKey } = responseData;
+      const { url, error } = responseData;
 
-      if (!clientSecret) {
-        throw new Error('Failed to create payment intent');
+      if (error || !url) {
+        throw new Error(error || 'Failed to create checkout session');
       }
 
-      // Initialize payment sheet
-      const { error } = await initPaymentSheet({
-        merchantDisplayName: 'Fit Fusion AI',
-        customerId: customerId,
-        customerEphemeralKeySecret: ephemeralKey,
-        paymentIntentClientSecret: clientSecret,
-        allowsDelayedPaymentMethods: true,
-        returnURL: 'fitfusionai://stripe-return',
-      });
-
-      if (error) {
-        console.error('Payment sheet initialization error:', error);
-        Alert.alert('Error', `Failed to initialize payment: ${error.message || 'Unknown error'}`);
-        return;
+      // Open Stripe Checkout
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+        setPaymentSheetEnabled(true);
+      } else {
+        Alert.alert('Error', 'Unable to open checkout page');
       }
-
-      setPaymentSheetEnabled(true);
     } catch (error) {
-      console.error('Initialize payment sheet error:', error);
-      Alert.alert('Error', `Failed to set up payment: ${error.message || 'Unknown error'}`);
+      console.error('Initialize checkout error:', error);
+      Alert.alert('Error', `Failed to start checkout: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
