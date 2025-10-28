@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2023-10-16',
 });
 
 export async function POST(request: NextRequest) {
@@ -35,6 +35,13 @@ export async function POST(request: NextRequest) {
       }
 
       subscription = await stripe.subscriptions.cancel(subscriptions.data[0].id);
+    }
+
+    if (!subscription) {
+      return NextResponse.json(
+        { error: 'Failed to cancel subscription' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
