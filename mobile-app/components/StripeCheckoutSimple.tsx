@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = 'https://fit-fusion-backend-ui5g.vercel.app';
+const API_URL = 'https://fitfusion-backend.vercel.app';
 
 export default function StripeCheckoutSimple({ userId, planName = 'Premium', priceId }) {
   const [loading, setLoading] = useState(false);
