@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user from Supabase
     const { data: user, error: userError } = await supabase
       .from('profiles')
       .select('*')
@@ -38,38 +37,31 @@ export async function POST(request: NextRequest) {
 
     let stripeCustomerId = user.stripe_customer_id;
 
-    // Create Stripe customer if doesn't exist
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
         email: user.email,
         name: user.display_name,
-        metadata: {
-          user_id: customerId,
-        },
+        metadata: { user_id: customerId },
       });
 
       stripeCustomerId = customer.id;
 
-      // Update user with Stripe customer ID
       await supabase
         .from('profiles')
         .update({ stripe_customer_id: stripeCustomerId })
         .eq('id', customerId);
     }
 
-    // Attach payment method to customer
     await stripe.paymentMethods.attach(paymentMethodId, {
       customer: stripeCustomerId,
     });
 
-    // Set as default payment method
     await stripe.customers.update(stripeCustomerId, {
       invoice_settings: {
         default_payment_method: paymentMethodId,
       },
     });
 
-    // Create subscription
     const subscription = await stripe.subscriptions.create({
       customer: stripeCustomerId,
       items: [{ price: planId }],
@@ -78,7 +70,6 @@ export async function POST(request: NextRequest) {
       expand: ['latest_invoice.payment_intent'],
     });
 
-    // Save subscription to database
     await supabase.from('subscriptions').insert({
       user_id: customerId,
       stripe_subscription_id: subscription.id,
@@ -87,7 +78,6 @@ export async function POST(request: NextRequest) {
       plan_id: planId,
     });
 
-    // Update user premium status
     await supabase
       .from('profiles')
       .update({ 
@@ -104,7 +94,7 @@ export async function POST(request: NextRequest) {
         client_secret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create subscription error:', error);
     return NextResponse.json(
       { error: 'Failed to create subscription' },
@@ -112,21 +102,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

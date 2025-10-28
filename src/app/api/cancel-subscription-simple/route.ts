@@ -19,10 +19,8 @@ export async function POST(request: NextRequest) {
     let subscription;
 
     if (subscriptionId) {
-      // Cancel by subscription ID
       subscription = await stripe.subscriptions.cancel(subscriptionId);
     } else if (customerId) {
-      // Find and cancel customer's active subscription
       const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
         status: 'active',
@@ -49,7 +47,7 @@ export async function POST(request: NextRequest) {
       },
       message: 'Subscription canceled successfully. You will retain access until the end of your current billing period.'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cancel subscription error:', error);
     return NextResponse.json(
       { error: 'Failed to cancel subscription', details: error.message },
@@ -57,12 +55,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
-
-
 

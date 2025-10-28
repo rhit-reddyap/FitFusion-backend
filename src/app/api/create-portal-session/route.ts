@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user from Supabase
     const { data: user, error: userError } = await supabase
       .from('profiles')
       .select('*')
@@ -43,7 +42,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create billing portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: user.stripe_customer_id,
       return_url: returnUrl,
@@ -52,7 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       url: session.url,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create portal session error:', error);
     return NextResponse.json(
       { error: 'Failed to create portal session' },
@@ -60,3 +58,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
