@@ -12,7 +12,9 @@ const nextConfig = {
   eslint: {
     // Optional: let the build proceed even if there are ESLint errors
     ignoreDuringBuilds: false
-  }
+  },
+  // Exclude mobile-app from build
+  pageExtensions: ['tsx', 'ts'],
 };
 
 export default nextConfig;
