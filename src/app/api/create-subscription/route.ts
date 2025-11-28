@@ -15,6 +15,30 @@ export async function POST(request: NextRequest) {
   try {
     const { planId, paymentMethodId, customerId } = await request.json();
 
+    // CRITICAL: If using Stripe Checkout, this endpoint should NOT be called
+    // Stripe Checkout creates subscriptions automatically via webhooks
+    // This endpoint is only for manual payment method collection flows
+    console.warn('create-subscription endpoint called - This should not be used with Stripe Checkout!', {
+      planId,
+      customerId,
+      hasPaymentMethodId: !!paymentMethodId,
+      paymentMethodIdType: typeof paymentMethodId,
+      paymentMethodIdValue: paymentMethodId
+    });
+
+    // IMMEDIATE CHECK: If paymentMethodId is missing, return error BEFORE any Stripe calls
+    if (paymentMethodId === undefined || paymentMethodId === null || paymentMethodId === '') {
+      const errorMsg = 'paymentMethodId is required but was missing. When using Stripe Checkout, subscriptions are created automatically via webhooks - do not call this endpoint.';
+      console.error('BLOCKING: Missing paymentMethodId', { planId, customerId, paymentMethodId });
+      return NextResponse.json(
+        { 
+          error: 'Missing payment method ID',
+          details: errorMsg
+        },
+        { status: 400 }
+      );
+    }
+
     // Validate required fields with detailed error messages
     if (!planId) {
       return NextResponse.json(
@@ -31,8 +55,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Strict validation for paymentMethodId
+    // THIS IS THE CRITICAL CHECK - This must catch undefined before it reaches Stripe
+    if (paymentMethodId === undefined || paymentMethodId === null) {
+      console.error('CRITICAL: paymentMethodId is undefined/null:', { 
+        planId, 
+        customerId, 
+        paymentMethodId,
+        requestBody: JSON.stringify({ planId, customerId, paymentMethodId })
+      });
+      return NextResponse.json(
+        { 
+          error: 'Missing payment method ID',
+          details: 'paymentMethodId is required but was undefined. If using Stripe Checkout, DO NOT call this endpoint - subscriptions are created automatically via webhooks. This endpoint is only for manual payment collection.'
+        },
+        { status: 400 }
+      );
+    }
+    
     if (!paymentMethodId) {
-      console.error('paymentMethodId is missing or undefined:', { planId, customerId, paymentMethodId });
+      console.error('paymentMethodId is falsy:', { planId, customerId, paymentMethodId, type: typeof paymentMethodId });
       return NextResponse.json(
         { 
           error: 'Missing or invalid payment method',
