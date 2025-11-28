@@ -22,15 +22,27 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { priceId, userId, successUrl, cancelUrl } = req.body;
+    const { priceId, planType, userId, successUrl, cancelUrl } = req.body;
 
     // Validate required fields
-    if (!priceId) {
-      return res.status(400).json({ error: 'Missing required field: priceId' });
-    }
-
     if (!userId) {
       return res.status(400).json({ error: 'Missing required field: userId' });
+    }
+
+    // Determine price ID - use provided priceId or look up from planType
+    let finalPriceId = priceId;
+    
+    if (!finalPriceId && planType) {
+      // Use default price IDs based on plan type
+      const defaultPriceIds = {
+        monthly: process.env.STRIPE_MONTHLY_PRICE_ID || 'price_1STotm0yFM5cg5nbgDYnZ6XO',
+        yearly: process.env.STRIPE_ANNUAL_PRICE_ID || 'price_1STotm0yFM5cg5nbgDYnZ6XO',
+      };
+      finalPriceId = defaultPriceIds[planType];
+    }
+
+    if (!finalPriceId) {
+      return res.status(400).json({ error: 'Missing required field: priceId or planType' });
     }
 
     // Validate Stripe key is configured
@@ -45,7 +57,7 @@ module.exports = async function handler(req, res) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: priceId,
+          price: finalPriceId,
           quantity: 1,
         },
       ],

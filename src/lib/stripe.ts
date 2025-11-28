@@ -5,9 +5,9 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export const STRIPE_CONFIG = {
-  monthlyPriceId: process.env.STRIPE_MONTHLY_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
-  annualPriceId: process.env.STRIPE_ANNUAL_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
-  cookbookPriceId: process.env.STRIPE_COOKBOOK_PRICE_ID || 'price_1SMYDWDWZWYqINdc14CRwrXR',
+  monthlyPriceId: process.env.STRIPE_MONTHLY_PRICE_ID || 'price_1STotm0yFM5cg5nbgDYnZ6XO',
+  annualPriceId: process.env.STRIPE_ANNUAL_PRICE_ID || 'price_1STotm0yFM5cg5nbgDYnZ6XO',
+  cookbookPriceId: process.env.STRIPE_COOKBOOK_PRICE_ID || 'price_1STotm0yFM5cg5nbgDYnZ6XO',
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_your_webhook_secret_here',
 };
 
