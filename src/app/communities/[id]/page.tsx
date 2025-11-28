@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import AuthGuard from "@/components/AuthGuard";
 import { useParams } from "next/navigation";
 
