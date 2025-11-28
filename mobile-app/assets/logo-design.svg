@@ -1,0 +1,41 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0A0A1A"/>
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="figureGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00FF88;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FF0080;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="flameGradient1" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#00FF88;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="flameGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="33%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="66%" style="stop-color:#FF0080;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Left flame elements -->
+  <path d="M120 280 Q100 250 120 220 Q140 200 160 220 Q180 240 160 260 Q140 280 120 280" fill="url(#flameGradient1)"/>
+  <path d="M140 300 Q120 270 140 250 Q160 230 180 250 Q200 270 180 290 Q160 310 140 300" fill="url(#flameGradient1)"/>
+  
+  <!-- Main figure -->
+  <path d="M200 120 Q220 100 240 120 Q260 140 250 160 Q240 180 220 200 Q200 220 180 240 Q160 260 140 280 Q120 300 140 320 Q160 340 180 320 Q200 300 220 280 Q240 260 260 240 Q280 220 300 200 Q320 180 340 160 Q360 140 350 120 Q340 100 320 120 Q300 140 280 160 Q260 180 240 200 Q220 220 200 240 Q180 260 200 280 Q220 300 240 280 Q260 260 280 240 Q300 220 320 200 Q340 180 360 160 Q380 140 370 120 Q360 100 340 120 Q320 140 300 160 Q280 180 260 200 Q240 220 220 240 Q200 260 200 280 Q200 300 200 320 Q200 340 200 360 Q200 380 200 400 Q200 420 200 440 Q200 460 200 480 Q200 500 200 520" fill="url(#figureGradient)"/>
+  
+  <!-- Right arc element -->
+  <path d="M300 120 Q320 100 340 120 Q360 140 350 160 Q340 180 320 200 Q300 220 280 240 Q260 260 240 280 Q220 300 200 320 Q180 340 160 360 Q140 380 120 400 Q100 420 120 440 Q140 460 160 440 Q180 420 200 400 Q220 380 240 360 Q260 340 280 320 Q300 300 320 280 Q340 260 360 240 Q380 220 400 200 Q420 180 440 160 Q460 140 480 120 Q500 100 520 120 Q540 140 520 160 Q500 180 480 200 Q460 220 440 240 Q420 260 400 280 Q380 300 360 320 Q340 340 320 360 Q300 380 280 400 Q260 420 240 440 Q220 460 200 480 Q180 500 160 520" fill="url(#flameGradient2)"/>
+  
+  <!-- Text -->
+  <text x="256" y="450" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="white">FitFusion</text>
+</svg>

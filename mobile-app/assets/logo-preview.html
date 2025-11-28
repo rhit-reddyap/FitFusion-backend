@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitFusion Logo Preview</title>
+    <style>
+        body {
+            background: #0A0A1A;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        .logo-container {
+            margin: 20px;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        h1 {
+            color: #00FF88;
+        }
+        .instructions {
+            background: #1A1A1A;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>FitFusion Logo Preview</h1>
+    
+    <div class="logo-container">
+        <h3>App Icon (1024x1024)</h3>
+        <img src="fitfusion-icon.svg" width="200" height="200" alt="FitFusion Icon">
+    </div>
+    
+    <div class="logo-container">
+        <h3>Splash Screen (1200x1200)</h3>
+        <img src="fitfusion-splash.svg" width="300" height="300" alt="FitFusion Splash">
+    </div>
+    
+    <div class="instructions">
+        <h3>📱 Implementation Steps:</h3>
+        <ol>
+            <li><strong>Convert SVG to PNG:</strong>
+                <ul>
+                    <li>Use an online converter (convertio.co, cloudconvert.com)</li>
+                    <li>Or use an image editor (Photoshop, GIMP, Canva)</li>
+                </ul>
+            </li>
+            <li><strong>Replace existing files:</strong>
+                <ul>
+                    <li><code>icon.png</code> (1024x1024) - Main app icon</li>
+                    <li><code>adaptive-icon.png</code> (1024x1024) - Android adaptive icon</li>
+                    <li><code>splash-icon.png</code> (1200x1200) - Splash screen</li>
+                    <li><code>favicon.png</code> (512x512) - Web favicon</li>
+                </ul>
+            </li>
+            <li><strong>Test the app:</strong>
+                <ul>
+                    <li>Run <code>npx expo start --clear</code></li>
+                    <li>Check the splash screen and app icon</li>
+                </ul>
+            </li>
+        </ol>
+        
+        <h3>🎨 Design Features:</h3>
+        <ul>
+            <li><strong>Background:</strong> Dark navy blue (#0A0A1A)</li>
+            <li><strong>Figure:</strong> Gradient from green to blue</li>
+            <li><strong>Flames:</strong> Energy elements in gradient colors</li>
+            <li><strong>Text:</strong> Clean white "FitFusion" branding</li>
+        </ul>
+    </div>
+</body>
+</html>

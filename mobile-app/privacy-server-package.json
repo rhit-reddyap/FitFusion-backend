@@ -1,0 +1,25 @@
+{
+  "name": "fit-fusion-privacy-server",
+  "version": "1.0.0",
+  "description": "Privacy policy and OAuth callback server for Fit Fusion",
+  "main": "serve-privacy-policy.js",
+  "scripts": {
+    "start": "node serve-privacy-policy.js",
+    "dev": "nodemon serve-privacy-policy.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["privacy", "oauth", "whoop", "fit-fusion"],
+  "author": "Fit Fusion Team",
+  "license": "MIT"
+}
+
+
+
+
+
+

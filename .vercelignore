@@ -1,0 +1,7 @@
+mobile-app/
+mobile-app.json
+dataconnect/
+dataconnect-generated/
+*.bat
+*.sh
+
