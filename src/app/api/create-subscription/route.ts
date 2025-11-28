@@ -15,9 +15,27 @@ export async function POST(request: NextRequest) {
   try {
     const { planId, paymentMethodId, customerId } = await request.json();
 
-    if (!planId || !paymentMethodId || !customerId) {
+    // Validate required fields with detailed error messages
+    if (!planId) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required field: planId' },
+        { status: 400 }
+      );
+    }
+    
+    if (!customerId) {
+      return NextResponse.json(
+        { error: 'Missing required field: customerId' },
+        { status: 400 }
+      );
+    }
+
+    if (!paymentMethodId || typeof paymentMethodId !== 'string' || paymentMethodId.trim() === '') {
+      return NextResponse.json(
+        { 
+          error: 'Missing or invalid payment method',
+          details: 'paymentMethodId must be a non-empty string. If using Stripe Checkout, subscriptions are created automatically via webhooks.'
+        },
         { status: 400 }
       );
     }
@@ -52,15 +70,43 @@ export async function POST(request: NextRequest) {
         .eq('id', customerId);
     }
 
-    await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: stripeCustomerId,
-    });
+    // Only attach payment method if it's not already attached
+    try {
+      // Check if payment method is already attached
+      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      
+      if (!paymentMethod.customer) {
+        // Payment method is not attached, attach it now
+        await stripe.paymentMethods.attach(paymentMethodId, {
+          customer: stripeCustomerId,
+        });
+      } else if (paymentMethod.customer !== stripeCustomerId) {
+        // Payment method is attached to a different customer
+        return NextResponse.json(
+          { 
+            error: 'Payment method already attached to another customer',
+            details: 'This payment method is already associated with a different customer account'
+          },
+          { status: 400 }
+        );
+      }
 
-    await stripe.customers.update(stripeCustomerId, {
-      invoice_settings: {
-        default_payment_method: paymentMethodId,
-      },
-    });
+      // Set as default payment method
+      await stripe.customers.update(stripeCustomerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+    } catch (attachError: any) {
+      console.error('Error attaching payment method:', attachError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to attach payment method',
+          details: attachError?.message || 'Payment method could not be attached. Please check the payment method ID.'
+        },
+        { status: 400 }
+      );
+    }
 
     const subscription = await stripe.subscriptions.create({
       customer: stripeCustomerId,
@@ -96,10 +142,34 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Create subscription error:', error);
+    
+    // Handle specific Stripe errors
+    if (error?.type === 'StripeInvalidRequestError') {
+      return NextResponse.json(
+        { 
+          error: 'Stripe API error',
+          details: error.message || 'Invalid request to Stripe API'
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (error?.type && error.type.startsWith('Stripe')) {
+      return NextResponse.json(
+        { 
+          error: 'Stripe error',
+          details: error.message || String(error)
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to create subscription' },
+      { 
+        error: 'Failed to create subscription',
+        details: error?.message || String(error)
+      },
       { status: 500 }
     );
   }
 }
-
