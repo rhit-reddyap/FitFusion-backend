@@ -12,32 +12,84 @@ const supabase = createClient(
 );
 
 export async function POST(request: NextRequest) {
+  // IMMEDIATE RETURN - Block this endpoint completely if paymentMethodId is invalid
+  // This prevents ANY Stripe API calls with undefined payment_method
+  let requestBody;
   try {
-    const { planId, paymentMethodId, customerId } = await request.json();
+    requestBody = await request.json();
+  } catch (e) {
+    return NextResponse.json({ error: 'Invalid JSON request' }, { status: 400 });
+  }
 
+  const { planId, paymentMethodId, customerId } = requestBody || {};
+
+  // ABSOLUTE FIRST CHECK - Check typeof BEFORE calling .trim() to avoid errors
+  // This MUST prevent Stripe API calls with undefined payment_method
+  if (paymentMethodId === undefined || paymentMethodId === null) {
+    console.error('BLOCKED: paymentMethodId is undefined/null', {
+      paymentMethodId,
+      type: typeof paymentMethodId,
+      planId,
+      customerId,
+      fullRequest: JSON.stringify(requestBody)
+    });
+    return NextResponse.json(
+      {
+        error: 'Missing payment method ID',
+        details: 'paymentMethodId is required but was undefined or null. When using Stripe Checkout, subscriptions are created automatically via webhooks - do not call this endpoint.'
+      },
+      { status: 400 }
+    );
+  }
+  
+  if (typeof paymentMethodId !== 'string') {
+    console.error('BLOCKED: paymentMethodId is not a string', {
+      paymentMethodId,
+      type: typeof paymentMethodId,
+      planId,
+      customerId
+    });
+    return NextResponse.json(
+      {
+        error: 'Invalid payment method ID type',
+        details: `paymentMethodId must be a string, but got ${typeof paymentMethodId}. When using Stripe Checkout, subscriptions are created automatically via webhooks.`
+      },
+      { status: 400 }
+    );
+  }
+  
+  if (paymentMethodId.trim() === '') {
+    console.error('BLOCKED: paymentMethodId is empty string', {
+      planId,
+      customerId
+    });
+    return NextResponse.json(
+      {
+        error: 'Empty payment method ID',
+        details: 'paymentMethodId cannot be empty. When using Stripe Checkout, subscriptions are created automatically via webhooks.'
+      },
+      { status: 400 }
+    );
+  }
+  
+  // At this point, paymentMethodId is guaranteed to be a non-empty string
+  console.log('✓ paymentMethodId validated:', { 
+    length: paymentMethodId.length,
+    type: typeof paymentMethodId,
+    firstChars: paymentMethodId.substring(0, 10)
+  });
+
+  // Only proceed if paymentMethodId is valid
+  try {
     // CRITICAL: If using Stripe Checkout, this endpoint should NOT be called
     // Stripe Checkout creates subscriptions automatically via webhooks
     // This endpoint is only for manual payment method collection flows
     console.warn('create-subscription endpoint called - This should not be used with Stripe Checkout!', {
       planId,
       customerId,
-      hasPaymentMethodId: !!paymentMethodId,
       paymentMethodIdType: typeof paymentMethodId,
-      paymentMethodIdValue: paymentMethodId
+      paymentMethodIdLength: paymentMethodId?.length
     });
-
-    // IMMEDIATE CHECK: If paymentMethodId is missing, return error BEFORE any Stripe calls
-    if (paymentMethodId === undefined || paymentMethodId === null || paymentMethodId === '') {
-      const errorMsg = 'paymentMethodId is required but was missing. When using Stripe Checkout, subscriptions are created automatically via webhooks - do not call this endpoint.';
-      console.error('BLOCKING: Missing paymentMethodId', { planId, customerId, paymentMethodId });
-      return NextResponse.json(
-        { 
-          error: 'Missing payment method ID',
-          details: errorMsg
-        },
-        { status: 400 }
-      );
-    }
 
     // Validate required fields with detailed error messages
     if (!planId) {
