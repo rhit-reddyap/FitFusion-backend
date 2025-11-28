@@ -30,15 +30,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!paymentMethodId || typeof paymentMethodId !== 'string' || paymentMethodId.trim() === '') {
+    // Strict validation for paymentMethodId
+    if (!paymentMethodId) {
+      console.error('paymentMethodId is missing or undefined:', { planId, customerId, paymentMethodId });
       return NextResponse.json(
         { 
           error: 'Missing or invalid payment method',
-          details: 'paymentMethodId must be a non-empty string. If using Stripe Checkout, subscriptions are created automatically via webhooks.'
+          details: 'paymentMethodId is required. If using Stripe Checkout, subscriptions are created automatically via webhooks and you should not call this endpoint manually.'
         },
         { status: 400 }
       );
     }
+    
+    if (typeof paymentMethodId !== 'string') {
+      console.error('paymentMethodId is not a string:', { planId, customerId, paymentMethodId, type: typeof paymentMethodId });
+      return NextResponse.json(
+        { 
+          error: 'Invalid payment method type',
+          details: `paymentMethodId must be a string, but got ${typeof paymentMethodId}. If using Stripe Checkout, subscriptions are created automatically via webhooks.`
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (paymentMethodId.trim() === '') {
+      console.error('paymentMethodId is empty string:', { planId, customerId });
+      return NextResponse.json(
+        { 
+          error: 'Empty payment method ID',
+          details: 'paymentMethodId cannot be empty. If using Stripe Checkout, subscriptions are created automatically via webhooks.'
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Additional check before using paymentMethodId
+    console.log('Creating subscription with paymentMethodId:', { planId, customerId, paymentMethodIdLength: paymentMethodId.length });
 
     const { data: user, error: userError } = await supabase
       .from('profiles')
@@ -72,11 +99,37 @@ export async function POST(request: NextRequest) {
 
     // Only attach payment method if it's not already attached
     try {
+      // Double-check paymentMethodId is still valid before calling Stripe
+      if (!paymentMethodId || typeof paymentMethodId !== 'string' || paymentMethodId.trim() === '') {
+        console.error('paymentMethodId became invalid before Stripe call:', { paymentMethodId });
+        return NextResponse.json(
+          { 
+            error: 'Invalid payment method ID',
+            details: 'Payment method ID is invalid or empty'
+          },
+          { status: 400 }
+        );
+      }
+      
       // Check if payment method is already attached
+      console.log('Retrieving payment method from Stripe:', paymentMethodId);
       const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
       
       if (!paymentMethod.customer) {
         // Payment method is not attached, attach it now
+        // Final safety check before attaching
+        if (!paymentMethodId || typeof paymentMethodId !== 'string') {
+          console.error('paymentMethodId invalid before attach:', { paymentMethodId, type: typeof paymentMethodId });
+          return NextResponse.json(
+            { 
+              error: 'Invalid payment method ID',
+              details: 'Payment method ID is missing or invalid before attachment'
+            },
+            { status: 400 }
+          );
+        }
+        
+        console.log('Attaching payment method:', { paymentMethodId, stripeCustomerId });
         await stripe.paymentMethods.attach(paymentMethodId, {
           customer: stripeCustomerId,
         });
