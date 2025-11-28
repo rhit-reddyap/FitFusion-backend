@@ -9,6 +9,61 @@ export default async function handler(req, res) {
   try {
     const { planId, paymentMethodId, customerId } = req.body;
 
+    // IMMEDIATE VALIDATION - Block undefined paymentMethodId before Stripe calls
+    // This prevents ANY Stripe API calls with undefined payment_method
+    if (paymentMethodId === undefined || paymentMethodId === null) {
+      console.error('BLOCKED: paymentMethodId is undefined/null', {
+        paymentMethodId,
+        type: typeof paymentMethodId,
+        planId,
+        customerId,
+        fullRequest: JSON.stringify(req.body)
+      });
+      return res.status(400).json({
+        error: 'Missing payment method ID',
+        details: 'paymentMethodId is required but was undefined or null. When using Stripe Checkout, subscriptions are created automatically via webhooks - do not call this endpoint.'
+      });
+    }
+    
+    if (typeof paymentMethodId !== 'string') {
+      console.error('BLOCKED: paymentMethodId is not a string', {
+        paymentMethodId,
+        type: typeof paymentMethodId,
+        planId,
+        customerId
+      });
+      return res.status(400).json({
+        error: 'Invalid payment method ID type',
+        details: `paymentMethodId must be a string, but got ${typeof paymentMethodId}. When using Stripe Checkout, subscriptions are created automatically via webhooks.`
+      });
+    }
+    
+    if (paymentMethodId.trim() === '') {
+      console.error('BLOCKED: paymentMethodId is empty string', {
+        planId,
+        customerId
+      });
+      return res.status(400).json({
+        error: 'Empty payment method ID',
+        details: 'paymentMethodId cannot be empty. When using Stripe Checkout, subscriptions are created automatically via webhooks.'
+      });
+    }
+    
+    // At this point, paymentMethodId is guaranteed to be a non-empty string
+    console.log('✓ paymentMethodId validated:', { 
+      length: paymentMethodId.length,
+      type: typeof paymentMethodId,
+      firstChars: paymentMethodId.substring(0, 10)
+    });
+
+    // CRITICAL: If using Stripe Checkout, this endpoint should NOT be called
+    console.warn('create-subscription endpoint called - This should not be used with Stripe Checkout!', {
+      planId,
+      customerId,
+      paymentMethodIdType: typeof paymentMethodId,
+      paymentMethodIdLength: paymentMethodId?.length
+    });
+
     // Create or retrieve customer
     let customer;
     try {
