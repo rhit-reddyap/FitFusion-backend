@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
       // Use default price IDs based on plan type
       const defaultPriceIds = {
         monthly: process.env.STRIPE_MONTHLY_PRICE_ID || 'price_1STotm0yFM5cg5nbgDYnZ6XO',
-        yearly: process.env.STRIPE_ANNUAL_PRICE_ID || 'price_1STotm0yFM5cg5nbgDYnZ6XO',
+        yearly: process.env.STRIPE_ANNUAL_PRICE_ID || 'price_1SYYt30yFM5cg5nbB5xzjCGS',
       };
       finalPriceId = defaultPriceIds[planType];
     }
