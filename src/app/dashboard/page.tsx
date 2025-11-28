@@ -1,6 +1,8 @@
 "use client";
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const dynamicParams = true;
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';

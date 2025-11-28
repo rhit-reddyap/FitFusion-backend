@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description: "Backend API for Fit Fusion AI"
 };
 
+// Disable static generation - all pages will be dynamically rendered
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
