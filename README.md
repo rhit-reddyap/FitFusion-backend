@@ -20,3 +20,4 @@ Make sure these are set in Vercel:
 ## Deployment
 
 This project is automatically deployed to Vercel when you push to the main branch.
+
