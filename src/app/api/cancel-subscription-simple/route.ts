@@ -24,6 +24,18 @@ export async function OPTIONS(request: NextRequest) {
   return NextResponse.json({}, { headers: corsHeaders() });
 }
 
+// Handle GET requests (for testing/debugging)
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    {
+      message: 'Cancel Subscription Simple API endpoint',
+      methods: ['POST', 'OPTIONS'],
+      usage: 'POST /api/cancel-subscription-simple with { subscriptionId or customerId }',
+    },
+    { headers: corsHeaders() }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { subscriptionId, customerId } = await request.json();
