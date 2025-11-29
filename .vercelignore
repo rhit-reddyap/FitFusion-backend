@@ -4,4 +4,6 @@ dataconnect/
 dataconnect-generated/
 *.bat
 *.sh
-
+# Exclude root /api directory to use Next.js App Router routes instead
+/api/*.js
+/api/**/*.js
