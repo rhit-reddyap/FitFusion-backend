@@ -25,6 +25,18 @@ export async function OPTIONS(request: NextRequest) {
   return NextResponse.json({}, { headers: corsHeaders() });
 }
 
+// Handle GET requests (for testing/debugging)
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    {
+      message: 'Create Checkout Session API endpoint',
+      methods: ['POST', 'OPTIONS'],
+      usage: 'POST /api/stripe/create-checkout-session with { priceId or planType, userId, successUrl?, cancelUrl? }',
+    },
+    { headers: corsHeaders() }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Validate Stripe key is configured
