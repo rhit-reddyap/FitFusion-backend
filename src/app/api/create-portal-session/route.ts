@@ -30,6 +30,18 @@ export async function OPTIONS(request: NextRequest) {
   return NextResponse.json({}, { headers: corsHeaders() });
 }
 
+// Handle GET requests (for testing/debugging)
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    {
+      message: 'Create Portal Session API endpoint',
+      methods: ['POST', 'OPTIONS'],
+      usage: 'POST /api/create-portal-session with { customerId, returnUrl }',
+    },
+    { headers: corsHeaders() }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { customerId, returnUrl } = await request.json();
